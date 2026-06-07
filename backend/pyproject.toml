@@ -1,0 +1,74 @@
+[tool.poetry]
+name = "saferoute-bengaluru"
+version = "0.1.0"
+description = "AI-Powered Women Safety Navigation System - Backend"
+authors = ["SafeRoute Team"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+# Web framework
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+
+# Configuration
+pydantic = "^2.9.0"
+pydantic-settings = "^2.6.0"
+
+# Database
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.35"}
+asyncpg = "^0.30.0"
+geoalchemy2 = "^0.15.0"
+alembic = "^1.14.0"
+
+# Cache
+redis = {extras = ["hiredis"], version = "^5.2.0"}
+
+# Graph & Geospatial
+networkx = "^3.4.0"
+osmnx = "^2.0.0"
+scipy = "^1.14.0"
+shapely = "^2.0.6"
+geojson = "^3.1.0"
+
+# Background tasks
+celery = {extras = ["redis"], version = "^5.4.0"}
+
+# Auth
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+bcrypt = "4.0.1"
+
+# SMS (Twilio) - optional for mock mode
+twilio = "^9.3.0"
+
+# HTTP client
+httpx = "^0.28.0"
+
+# Utilities
+python-multipart = "^0.0.12"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+httpx = "^0.28.0"
+factory-boy = "^3.3.0"
+ruff = "^0.8.0"
+mypy = "^1.13.0"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

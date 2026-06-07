@@ -1,0 +1,50 @@
+# Environment
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Data files (large OSM downloads)
+backend/data/osm/*.osm
+backend/data/osm/*.pbf
+backend/data/ncrb/*.pdf
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Poetry
+poetry.lock
+
+# Celery and Cache
+backend/cache/
+backend/celerybeat-schedule

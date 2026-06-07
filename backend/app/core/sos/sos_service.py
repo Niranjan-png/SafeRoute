@@ -1,0 +1,45 @@
+"""SOS Service"""
+import logging
+import uuid
+from datetime import datetime
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.auth.sms_client import SMSClient
+from app.models.user import User
+
+logger = logging.getLogger(__name__)
+
+
+class SOSService:
+    def __init__(self, sms_client: SMSClient):
+        self.sms_client = sms_client
+
+    async def trigger_sos(self, db: AsyncSession, user: User, lat: float, lng: float) -> dict:
+        """Trigger an SOS alert and notify emergency contacts."""
+        contacts = user.emergency_contacts or []
+
+        maps_link = f"https://maps.google.com/?q={lat},{lng}"
+        user_name = user.name or user.phone
+        message = (
+            f"SOS ALERT from {user_name}!\n"
+            f"Location: {maps_link}\n"
+            f"Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n"
+            f"Sent via SafeRoute Bengaluru"
+        )
+
+        notified_names = []
+        for contact in contacts:
+            phone = contact.get("phone")
+            name = contact.get("name", "Unknown")
+            if phone:
+                await self.sms_client.send_message(phone, message)
+                notified_names.append(name)
+
+        return {
+            "event_id": uuid.uuid4(),
+            "status": "triggered",
+            "contacts_notified": len(notified_names),
+            "contact_names": notified_names,
+            "message": "SOS alert sent successfully",
+        }

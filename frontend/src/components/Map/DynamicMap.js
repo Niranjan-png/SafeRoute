@@ -23,50 +23,11 @@ export default function DynamicMap({
   selectedRoute = 'safest', 
   userLocation = null,
   navigationPosition = null,
-  navigationActive = false
+  navigationActive = false,
+  path = []
 }) {
-  const routes = {
-    safest: [
-      [12.9610, 77.5655],
-      [12.9612, 77.5670],
-      [12.9615, 77.5700],
-      [12.9620, 77.5740],
-      [12.9645, 77.5780],
-      [12.9660, 77.5850],
-      [12.9680, 77.5920],
-      [12.9698, 77.5975],
-      [12.9715, 77.6080],
-      [12.9725, 77.6150],
-      [12.9731, 77.6210],
-      [12.9750, 77.6280],
-      [12.9765, 77.6350],
-      [12.9784, 77.6408],
-    ],
-    balanced: [
-      [12.9610, 77.5655],
-      [12.9580, 77.5700],
-      [12.9550, 77.5800],
-      [12.9560, 77.5900],
-      [12.9520, 77.6050],
-      [12.9540, 77.6150],
-      [12.9560, 77.6250],
-      [12.9620, 77.6300],
-      [12.9700, 77.6350],
-      [12.9784, 77.6408],
-    ],
-    fastest: [
-      [12.9610, 77.5655],
-      [12.9680, 77.5720],
-      [12.9730, 77.5780],
-      [12.9780, 77.5850],
-      [12.9790, 77.5980],
-      [12.9800, 77.6120],
-      [12.9795, 77.6250],
-      [12.9784, 77.6408],
-    ]
-  };
-
-  const currentPath = routes[selectedRoute] || routes.safest;
+  const currentPath = path || [];
+  const hasPath = currentPath.length > 0;
 
   const routeColors = {
     safest: '#0fa58a',
@@ -118,10 +79,13 @@ export default function DynamicMap({
     iconAnchor: [12, 12]
   }) : null;
 
+  const defaultCenter = [12.9610, 77.5655];
+  const centerPoint = hasPath ? currentPath[0] : defaultCenter;
+
   return (
     <div className="w-full h-full relative">
       <MapContainer 
-        center={currentPath[0]} 
+        center={centerPoint} 
         zoom={13} 
         zoomControl={false}
         style={{ height: '100%', width: '100%', zIndex: 0 }}
@@ -137,48 +101,50 @@ export default function DynamicMap({
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         
-        <Polyline 
-          positions={currentPath} 
-          pathOptions={{ 
-            color: activeColor, 
-            weight: 6, 
-            opacity: 0.85,
-            lineJoin: 'round',
-            lineCap: 'round'
-          }} 
-        />
-        
-        <Polyline 
-          positions={currentPath} 
-          pathOptions={{ 
-            color: activeColor, 
-            weight: 14, 
-            opacity: 0.2,
-            lineJoin: 'round',
-            lineCap: 'round'
-          }} 
-        />
+        {hasPath && (
+          <>
+            <Polyline 
+              positions={currentPath} 
+              pathOptions={{ 
+                color: activeColor, 
+                weight: 6, 
+                opacity: 0.85,
+                lineJoin: 'round',
+                lineCap: 'round'
+              }} 
+            />
+            
+            <Polyline 
+              positions={currentPath} 
+              pathOptions={{ 
+                color: activeColor, 
+                weight: 14, 
+                opacity: 0.2,
+                lineJoin: 'round',
+                lineCap: 'round'
+              }} 
+            />
 
-        {startIcon && (
-          <Marker position={currentPath[0]} icon={startIcon}>
-            <Popup>
-              <div className="p-1 font-sans">
-                <p className="font-bold text-primary text-sm">Start: BMSCE</p>
-                <p className="text-xs text-on-surface-variant">Bull Temple Road</p>
-              </div>
-            </Popup>
-          </Marker>
-        )}
+            {startIcon && (
+              <Marker position={currentPath[0]} icon={startIcon}>
+                <Popup>
+                  <div className="p-1 font-sans">
+                    <p className="font-bold text-primary text-sm">Start Location</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
 
-        {endIcon && (
-          <Marker position={currentPath[currentPath.length - 1]} icon={endIcon}>
-            <Popup>
-              <div className="p-1 font-sans">
-                <p className="font-bold text-error text-sm">Destination</p>
-                <p className="text-xs text-on-surface-variant">Indiranagar Metro Station</p>
-              </div>
-            </Popup>
-          </Marker>
+            {endIcon && (
+              <Marker position={currentPath[currentPath.length - 1]} icon={endIcon}>
+                <Popup>
+                  <div className="p-1 font-sans">
+                    <p className="font-bold text-error text-sm">Destination</p>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+          </>
         )}
 
         {userLocation && userIcon && !navigationActive && (

@@ -4,10 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function Settings() {
-  const [contacts, setContacts] = useState([
-    { id: 1, name: 'Priya Sharma', relation: 'Mother', phone: '+91 98765 43210' },
-    { id: 2, name: 'Ankit Verma', relation: 'Partner', phone: '+91 91234 56789' }
-  ]);
+  const [contacts, setContacts] = useState([]);
 
   const [routePref, setRoutePref] = useState('safest');
   const [autoSOS, setAutoSOS] = useState(true);

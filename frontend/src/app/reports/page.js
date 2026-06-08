@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchNearbyReports, postReport, verifyLocalReport, triggerSOSEmergency } from '../../utils/api';
+import { fetchNearbyReports, postReport, triggerSOSEmergency } from '../../utils/api';
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -39,8 +39,17 @@ export default function Reports() {
   };
 
   const handleVerify = (id) => {
-    const updated = verifyLocalReport(id);
-    setReports(updated);
+    setReports(prev => prev.map(report => {
+      const rid = report.report_id || report.id;
+      if (rid === id) {
+        return {
+          ...report,
+          verified_count: (report.verified_count || 0) + 1,
+          verifiedByUser: true
+        };
+      }
+      return report;
+    }));
   };
 
   const handleCreateReport = async (e) => {

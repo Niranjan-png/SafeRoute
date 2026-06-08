@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Map from '../components/Map/Map';
 import { fetchRoutes, triggerSOSEmergency } from '../utils/api';
-import { generateDirections } from '../utils/navigation';
+import { generateDirections, getDistance } from '../utils/navigation';
 
 export default function Home() {
   const [selectedRoute, setSelectedRoute] = useState('safest');
@@ -25,14 +25,53 @@ export default function Home() {
     balanced: [],
     fastest: []
   });
+  const [lastFetchCoords, setLastFetchCoords] = useState(null);
 
   const currentCoords = routePaths[selectedRoute] || [];
   const directions = generateDirections(currentCoords, selectedRoute);
 
+  // Set up real-time geolocation tracking with watchPosition
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!navigator.geolocation) {
+      setLocationPermission('denied');
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setUserLocation([lat, lng]);
+        setLocationPermission('granted');
+      },
+      (error) => {
+        console.error('Geolocation tracking error:', error);
+        setLocationPermission(prev => prev === 'unknown' ? 'denied' : prev);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
+  // Fetch routing whenever transit mode or location changes
   useEffect(() => {
     async function loadRoutes() {
-      const source = { lat: 12.9610, lng: 77.5655 };
+      const source = userLocation 
+        ? { lat: userLocation[0], lng: userLocation[1] } 
+        : { lat: 12.9610, lng: 77.5655 };
       const destination = { lat: 12.9784, lng: 77.6408 };
+
+      // Prevent redundant fetches if movement is minor (under 50m)
+      if (lastFetchCoords && userLocation) {
+        const dist = getDistance(lastFetchCoords[0], lastFetchCoords[1], userLocation[0], userLocation[1]);
+        if (dist < 50) return;
+      }
+
       const data = await fetchRoutes(source, destination);
       if (data && data.routes && data.routes.length > 0) {
         const info = {};
@@ -81,13 +120,16 @@ export default function Home() {
         });
         setRouteInfo(info);
         setRoutePaths(paths);
+        if (userLocation) {
+          setLastFetchCoords(userLocation);
+        }
       } else {
         setRouteInfo(null);
         setRoutePaths({ safest: [], balanced: [], fastest: [] });
       }
     }
     loadRoutes();
-  }, [transitMode]);
+  }, [transitMode, userLocation]);
 
   useEffect(() => {
     let timer;
@@ -153,9 +195,11 @@ export default function Home() {
     if (!navigator.geolocation) {
       setToast('Geolocation is not supported by your browser.');
       setTimeout(() => setToast(null), 3000);
-      setLocationPermission('denied');
       return;
     }
+
+    setToast('Requesting GPS live location...');
+    setTimeout(() => setToast(null), 2500);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -165,7 +209,7 @@ export default function Home() {
         setTimeout(() => setToast(null), 3000);
       },
       (error) => {
-        console.error(error);
+        console.error('Error requesting location:', error);
         setLocationPermission('denied');
         setToast('Location permission denied.');
         setTimeout(() => setToast(null), 3000);

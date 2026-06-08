@@ -1,6 +1,29 @@
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #006b59;
+  --color-primary-container: #0fa58a;
+  --color-on-primary: #ffffff;
+  --color-background: #f5fbf7;
+  --color-surface: #f5fbf7;
+  --color-surface-container: #e9efeb;
+  --color-surface-container-high: #e3eae6;
+  --color-surface-container-highest: #dee4e0;
+  --color-surface-container-low: #eff5f1;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #171d1b;
+  --color-on-surface-variant: #3d4945;
+  --color-outline: #6d7a75;
+  --color-outline-variant: #bccac4;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  
+  --font-display: 'Inter', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+}
+
 /* Design System Core Tokens */
 :root {
   --primary: #006b59;

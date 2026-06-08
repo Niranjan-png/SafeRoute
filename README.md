@@ -1,148 +1,272 @@
 # SafeRoute Bengaluru 🚦🛡️
 
-An AI-powered navigation system optimized for women's safety, utilizing live crowd density, street lighting, and CCTV coverage metrics to compute the safest walking, biking, or driving paths.
+<div align="center">
 
-SafeRoute is a safety-first routing engine and community safety app built for Bengaluru. It prioritizes user safety over pure travel speed by combining OpenStreetMap (OSM) road networks with real and simulated safety data (CCTV coverage, crime incidents, lighting, and emergency facilities).
+  <img src="assets/saferoute_banner.png" alt="SafeRoute Banner" width="100%" />
 
-Developed by **Niranjan K** and **Tushar Jain**.
+  <p align="center">
+    <strong>An AI-powered safety-first navigation engine and real-time safety network optimized for women's safety in Bengaluru.</strong>
+  </p>
+
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
+  [![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+  [![Tailwind CSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+  [![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+  [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
+  [![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
+  [![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)](https://www.python.org)
+  [![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+  [![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=Leaflet&logoColor=white)](https://leafletjs.com)
+
+</div>
 
 ---
 
-## 📂 Project Structure
+## 📖 Table of Contents
+1. [Overview](#-overview)
+2. [Key Features](#-key-features)
+3. [System Architecture](#-system-architecture)
+4. [Project Directory Structure](#-project-directory-structure)
+5. [Getting Started](#-getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Database & Services Setup](#1-database--services-setup)
+    - [Backend API Setup](#2-backend-api-setup)
+    - [Frontend Web App Setup](#3-frontend-web-app-setup)
+6. [Database Seeding & OSM Imports](#-database-seeding--osm-imports)
+7. [Safety-Weighted Scoring Engine](#-safety-weighted-scoring-engine)
+8. [API Reference & WebSocket Protocol](#-api-reference--websocket-protocol)
+9. [Contributors](#-contributors)
+
+---
+
+## 🔍 Overview
+
+**SafeRoute Bengaluru** is an intelligent, safety-centric routing platform designed to safeguard commuters—particularly women—in urban environments. Traditional mapping apps calculate routes based strictly on time and distance. SafeRoute, however, computes the **safest walking, biking, or driving paths** by analyzing street lighting levels, CCTV coverage, crowd densities, historical crime data, and emergency facility locations.
+
+---
+
+## ✨ Key Features
+
+*   **🛡️ Multi-Weighted Safety Routing**: Compute Safest, Balanced, and Fastest paths dynamically.
+*   **📍 Live Turn-by-Turn GPS Navigation**: An interactive navigation HUD resembling premium interfaces, offering real-time distance counters, progress tracking, and direction changes (e.g., *"Turn left onto Residency Road"*).
+*   **🔥 Live Safety Heatmap**: Highlights safe (green) and unsafe (red) zones based on real-time crowdsourced reports and city-wide data.
+*   **🚨 Automatic SOS Alerts & Contacts**: Features a 3-second abort-countdown trigger to send simulated SMS alerts with live coordinates to trusted emergency contacts.
+*   **📢 Community Safety Feed**: Crowdsource localized alerts (broken streetlights, construction hazards, suspicious groups) with community verification checks.
+*   **📡 Real-Time Danger Alerts (WebSocket)**: Sends instantaneous push alerts to the mobile or web app if a user enters a segment with a safety score below `50`.
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    User([User Client: React/Next.js/Leaflet]) <--> |REST HTTP / JSON| API[FastAPI Server]
+    User <--> |WebSockets| WS[Live WS Alert Manager]
+    API --> |Queries / Spatial Math| DB[(PostgreSQL + PostGIS)]
+    API --> |Queues Graph Rebuild| Celery[Celery Worker]
+    Celery --> |Rebuilds NetworkX Graph| DB
+    Celery <--> |Task Broker| Cache[(Redis Cache / Broker)]
+    API <--> |Fetch / Cache Session| Cache
+```
+
+---
+
+## 📂 Project Directory Structure
 
 ```
 SafeRoute/
-├── backend/                # FastAPI backend, Celery workers, and PostGIS data
-│   ├── app/                # Core application logic
-│   ├── data/               # OSM and synthetic seeding scripts
-│   ├── docs/               # Technical backend documentation
-│   └── tests/              # Pytest test suite
-├── frontend/               # Next.js 16 Web Application (React 19, Tailwind v4, Leaflet)
-│   └── src/
-│       ├── app/            # App router pages (Home, Safety Feed, Settings)
-│       ├── components/     # Reusable components (Leaflet Dynamic Map)
-│       └── utils/          # Core utilities (API Client, Navigation math)
-├── infra/                  # Docker Compose files for DB/Redis
-├── .gitignore              # Workspace-wide git ignore rules
-├── README.md               # Main project documentation
-└── SafeRoute_Bengaluru_PRD.md # Product Requirements Document
+├── backend/                  # FastAPI Web Backend
+│   ├── app/                  # Application code
+│   │   ├── api/              # API router and endpoints (Auth, Route, SOS)
+│   │   ├── core/             # Core logic (Safety scoring, Dijkstra routing, WS manager)
+│   │   ├── models/           # SQLAlchemy DB models (CCTV, Crime, Nodes, Streets)
+│   │   ├── schemas/          # Pydantic schemas for request/response validation
+│   │   └── workers/          # Celery tasks (scoring refreshes, graph rebuilds)
+│   ├── data/                 # OSM imports and synthetic seeding scripts
+│   │   └── scripts/          # Database loader scripts
+│   ├── migrations/           # Alembic database migrations
+│   ├── tests/                # Pytest unit & integration test suites
+│   ├── pyproject.toml        # Poetry package configuration
+│   └── Dockerfile            # Container build spec
+├── frontend/                 # Next.js 16 Client App (React 19, Tailwind v4, Leaflet)
+│   ├── src/
+│   │   ├── app/              # App router (Main map, Safety Feed, Settings)
+│   │   ├── components/       # Custom React widgets (Leaflet Map, HUD, SOS slider)
+│   │   └── utils/            # Core utilities (API client, navigation math)
+│   ├── public/               # Static icons & UI graphics
+│   └── package.json          # Node.js configurations
+├── infra/                    # Docker Compose Infrastructure
+│   └── docker-compose.yml    # PostgreSQL (PostGIS) and Redis services container config
+├── assets/                   # README images & branding assets
+├── SafeRoute_Bengaluru_PRD.md # Product Requirements Document
+└── README.md                 # Project README
 ```
-
----
-
-## ✨ Features
-
-- **Safe Navigation Routing**: Choose between Safest, Balanced, and Fastest paths. Safety scores are calculated using live weights for Streetlights, CCTV, Crowd Density, and Security Patrol reports.
-- **Turn-by-Turn Directions**: Generates directions dynamically (e.g., "Turn left onto Richmond Road in 250 meters") by calculating geometry headings.
-- **Multimodal Routing Options**: Select between Walking 🚶, Biking 🚴, and Driving 🚗 modes. Distance calculations, speed ETAs, and safety scores adapt automatically to your transit choice.
-- **Real-Time Geolocation**: Integrated HTML5 Geolocation API. Check your live position with pulsing radar marker waves.
-- **Google Maps-Style Navigation HUD**: Simulates active path tracking with an interactive HUD displaying turn arrows, distance counts, step progress bars, and ETA indicators.
-- **Community Safety Feed**: Read and broadcast live safety alerts (broken streetlights, suspicious activities, construction blocks) with user verification checks.
-- **Auto-SOS & Emergency Control**: Set up trusted contacts and preferences. Features a 3-second abort countdown overlay to prevent accidental SOS alerts.
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
-- **Node.js** (v18 or higher)
-- **Python** (v3.11 or higher)
-- **Docker Desktop** (needed for local PostGIS database and Redis)
+### Prerequisites
+
+Ensure you have the following installed on your developer machine:
+*   **Node.js** (v18.0+)
+*   **Python** (v3.11+)
+*   **Docker Desktop** (for PostgreSQL, PostGIS, and Redis)
 
 ---
 
-### 2. Backend Setup
+### 1. Database & Services Setup
 
-The backend relies on PostgreSQL (with PostGIS) and Redis.
+To run the platform, you need a running PostGIS database and Redis server. We package these inside a Docker Compose setup.
 
-#### Step 2.1: Start the Database via Docker
-Navigate to the `infra/` folder and run Docker Compose:
-```bash
-cd infra
-docker-compose up -d
-```
-
-#### Step 2.2: Setup the Python Environment
-Open a terminal in the `backend/` folder:
-```bash
-cd backend
-
-# Create and activate a virtual environment
-python -m venv venv
-venv\Scripts\activate      # On Windows
-# source venv/bin/activate # On Mac/Linux
-
-# Create your local configuration file
-copy .env.example .env     # On Windows
-# cp .env.example .env     # On Mac/Linux
-
-# Install dependencies via Poetry (Poetry is recommended)
-pip install poetry
-poetry install
-```
-*Note: Make sure to edit `.env` to configure your PostgreSQL credentials, Redis URLs, and Twilio API keys.*
-
-#### Step 2.3: Start the Backend API Server
-```bash
-# Run the API server with auto-reload
-poetry run uvicorn app.main:app --reload --port 8000
-```
-The API server will run at `http://localhost:8000`.
+1.  Navigate to the infrastructure directory:
+    ```bash
+    cd infra
+    ```
+2.  Launch the containers in the background:
+    ```bash
+    docker-compose up -d
+    ```
+    *This starts PostgreSQL with PostGIS on port `5432` and Redis on port `6379`.*
 
 ---
 
-### 3. Frontend Setup
+### 2. Backend API Setup
 
-Open a terminal in the `frontend/` folder:
-```bash
-cd frontend
+1.  Navigate to the backend directory:
+    ```bash
+    cd ../backend
+    ```
+2.  Copy the environment template:
+    ```bash
+    copy .env.example .env    # Windows CMD/PowerShell
+    # cp .env.example .env    # macOS/Linux
+    ```
+3.  Configure your credentials in `.env`.
+4.  Install dependencies using Poetry:
+    ```bash
+    pip install poetry
+    poetry install
+    ```
+5.  Run database migrations:
+    ```bash
+    poetry run alembic upgrade head
+    ```
+6.  Start the FastAPI application:
+    ```bash
+    poetry run uvicorn app.main:app --reload --port 8000
+    ```
+    *The API will start running at `http://localhost:8000`.*
 
-# Install frontend dependencies
-npm install
+---
 
-# Start the Next.js development server
-npm run dev
+### 3. Frontend Web App Setup
+
+1.  Open a new terminal and navigate to the frontend directory:
+    ```bash
+    cd frontend
+    ```
+2.  Install packages:
+    ```bash
+    npm install
+    ```
+3.  Launch the dev server:
+    ```bash
+    npm run dev
+    ```
+    *The web application will open at `http://localhost:3000`.*
+
+---
+
+## 💾 Database Seeding & OSM Imports
+
+The backend includes tools to scrape OpenStreetMap data for Bengaluru and generate synthetic safety assets.
+
+1.  **Seed Base OSM Road Network**:
+    Imports Bengaluru geographic nodes and segments:
+    ```bash
+    poetry run python data/scripts/import_osm.py
+    ```
+2.  **Generate Safety Assets (CCTV, Lights, Facilities)**:
+    Seeds mockup locations for streetlights, police stations, hospital coordinates, and camera networks:
+    ```bash
+    poetry run python data/scripts/seed_synthetic_network.py
+    ```
+3.  **Ingest Historical Crime Incidents**:
+    ```bash
+    poetry run python data/scripts/import_ncrb.py
+    ```
+
+---
+
+## 🧮 Safety-Weighted Scoring Engine
+
+The safety score ($S$) of each road segment is computed dynamically as a weighted sum of positive safety attributes minus penalties for negative attributes, bound between $[0, 100]$:
+
+$$S = \text{clamp}\left( w_1 \cdot \text{Lighting} + w_2 \cdot \text{CCTV} + w_3 \cdot \text{Crowd} + w_4 \cdot \text{Emergency} - \text{Crime Penalty}, \, 0, \, 100 \right)$$
+
+### Factor Weights:
+*   **Lighting ($w_1 = 0.35$)**: Streetlight density and luminosity.
+*   **CCTV ($w_2 = 0.25$)**: Camera density and intersection coverage.
+*   **Crowd ($w_3 = 0.20$)**: Pedestrian densities, based on live signals and venue check-ins.
+*   **Emergency ($w_4 = 0.20$)**: Proximity to police stations, health clinics, and help hubs.
+*   **Crime Penalty**: Computed based on historical incidents near the segment.
+
+---
+
+## 📡 API Reference & WebSocket Protocol
+
+### 🔑 Authentication Flow
+
+All protected endpoints require a Bearer token.
+1.  **Request OTP**:
+    `POST /api/v1/auth/request-otp`
+    ```json
+    { "phone_number": "+919876543210" }
+    ```
+2.  **Verify OTP**:
+    `POST /api/v1/auth/verify-otp`
+    ```json
+    { "phone_number": "+919876543210", "otp_code": "123456" }
+    ```
+    *Returns: `{ "access_token": "JWT_TOKEN", "token_type": "bearer" }`*
+
+---
+
+### 🗺️ Route Options Endpoint
+`POST /api/v1/route/options`
+
+**Request Body**:
+```json
+{
+  "source": { "lat": 12.9352, "lng": 77.6245 },
+  "destination": { "lat": 12.9784, "lng": 77.6408 }
+}
 ```
-Open `http://localhost:3000` in your browser to run the web application.
+
+**Response**:
+Returns a GeoJSON list containing `safest`, `balanced`, and `fastest` routes with calculated safety metrics for each road segment.
 
 ---
 
-## 📖 API Documentation & Integration
-
-Once the backend is running, the interactive Swagger API documentation is available at:
-👉 **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**
-
-Detailed manual references are also available in [`docs/api.md`](docs/api.md) and the algorithm details in [`docs/algorithm.md`](docs/algorithm.md).
-
-### 🔐 Authentication (Important!)
-Most endpoints are protected by JWT authentication. For development purposes, the SMS gateway is mocked.
-
-**To log in and get a token:**
-1. Call `POST /api/v1/auth/request-otp` with any dummy phone number (e.g. `+919876543210`).
-2. Call `POST /api/v1/auth/verify-otp` with the same phone number and the **development OTP**: `123456`.
-3. You will receive an `access_token` to use in your `Authorization: Bearer <token>` headers for all other requests.
-
-*(Note: If using the "Authorize" button in Swagger UI, type your phone number as the username and `123456` as the password).*
-
-### 🗺️ Key Integration Endpoints
-
-#### 1. Safety-Weighted Routing (`POST /api/v1/route/options`)
-- Provide `source` and `destination` coordinates.
-- It returns 3 distinct route options in GeoJSON format.
-- Render the GeoJSON polylines on a map (e.g. Leaflet). Each segment in the polyline has a `safety_score` property (0-100) that you can use to color-code the road (e.g., Red = unsafe, Green = safe).
-
-#### 2. Live Safety Heatmap (`GET /api/v1/safety/heatmap`)
-- Pass bounding box parameters based on the user's visible map bounds.
-- Renders a GeoJSON FeatureCollection of all road segments and their safety scores.
-
-#### 3. SOS Trigger (`POST /api/v1/sos/trigger`)
-- Triggered by an emergency button. Sends mocked SMS messages to emergency contacts.
-
-#### 4. Real-time Danger Alerts (WebSocket `ws://127.0.0.1:8000/api/v1/ws/live`)
-- Connect to this WebSocket and send the user's live GPS coordinates.
-- The server will push `DANGER_ALERT` JSON messages if the user enters a road segment with a safety score below `50`.
+### 📡 Real-Time Danger WebSocket
+*   **Endpoint**: `ws://localhost:8000/api/v1/ws/live`
+*   **Action**: Establish connection, then send user coordinates continuously:
+    ```json
+    { "lat": 12.9362, "lng": 77.6255 }
+    ```
+*   **Server Event**: If the user enters a coordinate snap segment with safety scoring under `50`, the server broadcasts:
+    ```json
+    {
+      "event_type": "DANGER_ALERT",
+      "message": "Warning: Approaching low-light zone with high crime history.",
+      "safety_score": 42
+    }
+    ```
 
 ---
 
-*For full project requirements, refer to the [PRD](SafeRoute_Bengaluru_PRD.md).*
+## 👥 Contributors
 
+*   **Niranjan K** (Lead Backend Engineer & Data Scientist)
+*   **Tushar Jain** (Lead Frontend & Interaction Designer)

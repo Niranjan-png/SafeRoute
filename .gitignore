@@ -11,6 +11,15 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*~
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
 
 # Frontend (Next.js)
 frontend/node_modules/
@@ -25,16 +34,17 @@ frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
 frontend/.pnpm-debug.log*
-frontend/.env
-frontend/.env.local
-frontend/.env.development.local
-frontend/.env.test.local
-frontend/.env.production.local
 
 # Backend (Python & FastAPI)
 **/__pycache__/
 **/*.py[cod]
 **/*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
 backend/.pytest_cache/
 backend/.venv/
 backend/venv/
@@ -45,6 +55,24 @@ backend/.env.bak
 backend/data/*.graphml
 backend/data/bengaluru_graph.graphml
 
+# Docker
+docker-compose.override.yml
+
+# Data files (large OSM downloads)
+backend/data/osm/*.osm
+backend/data/osm/*.pbf
+backend/data/ncrb/*.pdf
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Celery and Cache
+backend/cache/
+backend/celerybeat-schedule
+
 # Workspace & Scratch directories
 .gemini/
 temp_clone/
+

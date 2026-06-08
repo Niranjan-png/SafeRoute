@@ -1,36 +1,36 @@
-# SafeRoute Bengaluru
+# SafeRoute Bengaluru 🚦🛡️
 
 An AI-powered navigation system optimized for women's safety, utilizing live crowd density, street lighting, and CCTV coverage metrics to compute the safest walking, biking, or driving paths.
+
+SafeRoute is a safety-first routing engine and community safety app built for Bengaluru. It prioritizes user safety over pure travel speed by combining OpenStreetMap (OSM) road networks with real and simulated safety data (CCTV coverage, crime incidents, lighting, and emergency facilities).
 
 Developed by **Niranjan K** and **Tushar Jain**.
 
 ---
 
-## Folder Structure
+## 📂 Project Structure
 
 ```
-women-safety/
+SafeRoute/
+├── backend/                # FastAPI backend, Celery workers, and PostGIS data
+│   ├── app/                # Core application logic
+│   ├── data/               # OSM and synthetic seeding scripts
+│   ├── docs/               # Technical backend documentation
+│   └── tests/              # Pytest test suite
 ├── frontend/               # Next.js 16 Web Application (React 19, Tailwind v4, Leaflet)
-│   ├── src/
-│   │   ├── app/            # App router pages (Home, Safety Feed, Settings)
-│   │   ├── components/     # Reusable components (Leaflet Dynamic Map)
-│   │   └── utils/          # Core utilities (API Client, Navigation math)
-│   └── package.json
-│
-├── backend/                # FastAPI Application (Python 3.12, PostgreSQL + PostGIS)
-│   ├── app/                # Core FastAPI routes, models, schemas, and services
-│   ├── migrations/         # Alembic database migrations
-│   ├── tests/              # Pytest backend test suite
-│   ├── pyproject.toml      # Poetry package configuration
-│   └── Dockerfile
-│
+│   └── src/
+│       ├── app/            # App router pages (Home, Safety Feed, Settings)
+│       ├── components/     # Reusable components (Leaflet Dynamic Map)
+│       └── utils/          # Core utilities (API Client, Navigation math)
+├── infra/                  # Docker Compose files for DB/Redis
 ├── .gitignore              # Workspace-wide git ignore rules
-└── README.md               # Main project documentation
+├── README.md               # Main project documentation
+└── SafeRoute_Bengaluru_PRD.md # Product Requirements Document
 ```
 
 ---
 
-## Features
+## ✨ Features
 
 - **Safe Navigation Routing**: Choose between Safest, Balanced, and Fastest paths. Safety scores are calculated using live weights for Streetlights, CCTV, Crowd Density, and Security Patrol reports.
 - **Turn-by-Turn Directions**: Generates directions dynamically (e.g., "Turn left onto Richmond Road in 250 meters") by calculating geometry headings.
@@ -42,54 +42,107 @@ women-safety/
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 ### 1. Prerequisites
-
 - **Node.js** (v18 or higher)
 - **Python** (v3.11 or higher)
-- **PostgreSQL** with **PostGIS** extension
-- **Redis** server
-
-### 2. Backend Setup
-
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create your local configuration file:
-   ```bash
-   copy .env.example .env
-   ```
-   *Note: Edit `.env` to configure your PostgreSQL credentials, Redis URLs, and Twilio API keys.*
-3. Install dependencies and start the FastAPI server:
-   ```bash
-   poetry install
-   poetry run uvicorn app.main:app --reload --port 8000
-   ```
-   *The backend will run on `http://localhost:8000`.*
-
-### 3. Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd ../frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   *Open `http://localhost:3000` in your browser to run the application.*
+- **Docker Desktop** (needed for local PostGIS database and Redis)
 
 ---
 
-## License & Contributors
+### 2. Backend Setup
 
-Created for safety mapping in Bengaluru.
+The backend relies on PostgreSQL (with PostGIS) and Redis.
 
-- **Niranjan K**
-- **Tushar Jain**
+#### Step 2.1: Start the Database via Docker
+Navigate to the `infra/` folder and run Docker Compose:
+```bash
+cd infra
+docker-compose up -d
+```
+
+#### Step 2.2: Setup the Python Environment
+Open a terminal in the `backend/` folder:
+```bash
+cd backend
+
+# Create and activate a virtual environment
+python -m venv venv
+venv\Scripts\activate      # On Windows
+# source venv/bin/activate # On Mac/Linux
+
+# Create your local configuration file
+copy .env.example .env     # On Windows
+# cp .env.example .env     # On Mac/Linux
+
+# Install dependencies via Poetry (Poetry is recommended)
+pip install poetry
+poetry install
+```
+*Note: Make sure to edit `.env` to configure your PostgreSQL credentials, Redis URLs, and Twilio API keys.*
+
+#### Step 2.3: Start the Backend API Server
+```bash
+# Run the API server with auto-reload
+poetry run uvicorn app.main:app --reload --port 8000
+```
+The API server will run at `http://localhost:8000`.
+
+---
+
+### 3. Frontend Setup
+
+Open a terminal in the `frontend/` folder:
+```bash
+cd frontend
+
+# Install frontend dependencies
+npm install
+
+# Start the Next.js development server
+npm run dev
+```
+Open `http://localhost:3000` in your browser to run the web application.
+
+---
+
+## 📖 API Documentation & Integration
+
+Once the backend is running, the interactive Swagger API documentation is available at:
+👉 **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**
+
+Detailed manual references are also available in [`docs/api.md`](docs/api.md) and the algorithm details in [`docs/algorithm.md`](docs/algorithm.md).
+
+### 🔐 Authentication (Important!)
+Most endpoints are protected by JWT authentication. For development purposes, the SMS gateway is mocked.
+
+**To log in and get a token:**
+1. Call `POST /api/v1/auth/request-otp` with any dummy phone number (e.g. `+919876543210`).
+2. Call `POST /api/v1/auth/verify-otp` with the same phone number and the **development OTP**: `123456`.
+3. You will receive an `access_token` to use in your `Authorization: Bearer <token>` headers for all other requests.
+
+*(Note: If using the "Authorize" button in Swagger UI, type your phone number as the username and `123456` as the password).*
+
+### 🗺️ Key Integration Endpoints
+
+#### 1. Safety-Weighted Routing (`POST /api/v1/route/options`)
+- Provide `source` and `destination` coordinates.
+- It returns 3 distinct route options in GeoJSON format.
+- Render the GeoJSON polylines on a map (e.g. Leaflet). Each segment in the polyline has a `safety_score` property (0-100) that you can use to color-code the road (e.g., Red = unsafe, Green = safe).
+
+#### 2. Live Safety Heatmap (`GET /api/v1/safety/heatmap`)
+- Pass bounding box parameters based on the user's visible map bounds.
+- Renders a GeoJSON FeatureCollection of all road segments and their safety scores.
+
+#### 3. SOS Trigger (`POST /api/v1/sos/trigger`)
+- Triggered by an emergency button. Sends mocked SMS messages to emergency contacts.
+
+#### 4. Real-time Danger Alerts (WebSocket `ws://127.0.0.1:8000/api/v1/ws/live`)
+- Connect to this WebSocket and send the user's live GPS coordinates.
+- The server will push `DANGER_ALERT` JSON messages if the user enters a road segment with a safety score below `50`.
+
+---
+
+*For full project requirements, refer to the [PRD](SafeRoute_Bengaluru_PRD.md).*
+

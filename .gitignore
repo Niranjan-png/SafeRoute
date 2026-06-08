@@ -32,9 +32,9 @@ frontend/.env.test.local
 frontend/.env.production.local
 
 # Backend (Python & FastAPI)
-backend/__pycache__/
-backend/*.py[cod]
-backend/*$py.class
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
 backend/.pytest_cache/
 backend/.venv/
 backend/venv/

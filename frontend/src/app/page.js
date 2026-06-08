@@ -39,19 +39,29 @@ export default function Home() {
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        setUserLocation([lat, lng]);
-        setLocationPermission('granted');
-      },
-      (error) => {
-        console.error('Geolocation tracking error:', error);
-        setLocationPermission(prev => prev === 'unknown' ? 'denied' : prev);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    let watchId;
+    
+    const startWatching = () => {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setUserLocation([lat, lng]);
+          setLocationPermission('granted');
+        },
+        (error) => {
+          console.warn('Geolocation tracking unavailable (using fallback coordinates):', error.message || error);
+          setLocationPermission('denied');
+          if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    };
+
+    startWatching();
 
     return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);

@@ -6,6 +6,7 @@
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
     "start": "npm run start --prefix frontend",
-    "lint": "npm run lint --prefix frontend"
+    "lint": "npm run lint --prefix frontend",
+    "backend": "cd backend && python -m poetry run uvicorn app.main:app --reload --port 8000"
   }
 }

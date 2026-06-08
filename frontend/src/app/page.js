@@ -550,7 +550,7 @@ export default function Home() {
           </div>
 
           {!navigationActive ? (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[540px] glass-card rounded-3xl p-5 z-20 border border-white/60 shadow-2xl slide-up">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[540px] glass-card rounded-3xl p-5 z-20 border border-white/60 shadow-2xl slide-up-centered">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5 w-full sm:w-auto">
                   <div className="bg-primary/10 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
@@ -583,7 +583,7 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[540px] bg-primary text-white rounded-3xl p-5 z-30 shadow-2xl slide-up border border-primary-container/20">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[540px] bg-primary text-white rounded-3xl p-5 z-30 shadow-2xl slide-up-centered border border-primary-container/20">
               <div className="space-y-4">
                 <div className="flex items-start gap-4">
                   <div className="bg-white/10 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
@@ -716,7 +716,7 @@ export default function Home() {
       )}
 
       {toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-primary text-white px-5 py-3 rounded-2xl flex items-center gap-2.5 z-[100] shadow-2xl font-bold text-sm border border-white/20 slide-up">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-primary text-white px-5 py-3 rounded-2xl flex items-center gap-2.5 z-[100] shadow-2xl font-bold text-sm border border-white/20 slide-up-centered">
           <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield_with_heart</span>
           {toast}
         </div>

@@ -1,22 +1,59 @@
-# SafeRoute Bengaluru 🚦🛡️
-
 <div align="center">
+  <img src="assets/saferoute_logo_minimal.png" alt="SafeRoute Logo" width="160" height="160" style="border-radius: 24px; margin-bottom: 15px;" />
 
-  <img src="assets/saferoute_banner.png" alt="SafeRoute Banner" width="100%" />
+  # SafeRoute Bengaluru 🚦🛡️
 
   <p align="center">
-    <strong>An AI-powered safety-first navigation engine and real-time safety network optimized for women's safety in Bengaluru.</strong>
+    <strong>An AI-powered, safety-first routing engine and real-time community safety network optimized for women's navigation in Bengaluru.</strong>
   </p>
 
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-  [![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
-  [![Tailwind CSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-  [![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org)
-  [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
-  [![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
-  [![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)](https://www.python.org)
-  [![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
-  [![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=Leaflet&logoColor=white)](https://leafletjs.com)
+  <!-- Core badging system -->
+  <table>
+    <tr>
+      <td align="center"><strong>Frontend</strong></td>
+      <td align="center"><strong>Backend API</strong></td>
+      <td align="center"><strong>Database & GIS</strong></td>
+      <td align="center"><strong>APIs & Services</strong></td>
+    </tr>
+    <tr>
+      <td>
+        <img src="https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
+        <br />
+        <img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React" />
+        <br />
+        <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+        <br />
+        <img src="https://img.shields.io/badge/Leaflet-199900?style=flat-square&logo=leaflet&logoColor=white" alt="Leaflet JS" />
+      </td>
+      <td>
+        <img src="https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
+        <br />
+        <img src="https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
+        <br />
+        <img src="https://img.shields.io/badge/Celery-37814A?style=flat-square&logo=celery&logoColor=white" alt="Celery" />
+        <br />
+        <img src="https://img.shields.io/badge/NetworkX-00A4E4?style=flat-square&logo=python&logoColor=white" alt="NetworkX" />
+      </td>
+      <td>
+        <img src="https://img.shields.io/badge/PostgreSQL-316192?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+        <br />
+        <img src="https://img.shields.io/badge/PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostGIS" />
+        <br />
+        <img src="https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white" alt="Redis" />
+        <br />
+        <img src="https://img.shields.io/badge/Alembic-3670A0?style=flat-square&logo=python&logoColor=white" alt="Alembic" />
+      </td>
+      <td>
+        <img src="https://img.shields.io/badge/Twilio_SMS-F22F46?style=flat-square&logo=twilio&logoColor=white" alt="Twilio" />
+        <br />
+        <img src="https://img.shields.io/badge/OpenStreetMap-7EBC6F?style=flat-square&logo=openstreetmap&logoColor=white" alt="OSM" />
+        <br />
+        <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
+        <br />
+        <img src="https://img.shields.io/badge/Poetry-60A5FA?style=flat-square&logo=poetry&logoColor=white" alt="Poetry" />
+      </td>
+    </tr>
+  </table>
 
 </div>
 
@@ -25,17 +62,18 @@
 ## 📖 Table of Contents
 1. [Overview](#-overview)
 2. [Key Features](#-key-features)
-3. [System Architecture](#-system-architecture)
-4. [Project Directory Structure](#-project-directory-structure)
-5. [Getting Started](#-getting-started)
+3. [Technology Stack & Third-Party APIs](#-technology-stack--third-party-apis)
+4. [System Architecture](#-system-architecture)
+5. [Project Directory Structure](#-project-directory-structure)
+6. [Getting Started](#-getting-started)
     - [Prerequisites](#prerequisites)
     - [Database & Services Setup](#1-database--services-setup)
     - [Backend API Setup](#2-backend-api-setup)
     - [Frontend Web App Setup](#3-frontend-web-app-setup)
-6. [Database Seeding & OSM Imports](#-database-seeding--osm-imports)
-7. [Safety-Weighted Scoring Engine](#-safety-weighted-scoring-engine)
-8. [API Reference & WebSocket Protocol](#-api-reference--websocket-protocol)
-9. [Contributors](#-contributors)
+7. [Database Seeding & OSM Imports](#-database-seeding--osm-imports)
+8. [Safety-Weighted Scoring Engine & Routing Math](#-safety-weighted-scoring-engine--routing-math)
+9. [API Reference & WebSocket Protocol](#-api-reference--websocket-protocol)
+10. [Contributors](#-contributors)
 
 ---
 
@@ -53,6 +91,31 @@
 *   **🚨 Automatic SOS Alerts & Contacts**: Features a 3-second abort-countdown trigger to send simulated SMS alerts with live coordinates to trusted emergency contacts.
 *   **📢 Community Safety Feed**: Crowdsource localized alerts (broken streetlights, construction hazards, suspicious groups) with community verification checks.
 *   **📡 Real-Time Danger Alerts (WebSocket)**: Sends instantaneous push alerts to the mobile or web app if a user enters a segment with a safety score below `50`.
+
+---
+
+## 🛠️ Technology Stack & Third-Party APIs
+
+### Core Frameworks
+*   **Next.js 16 (React 19 & Tailwind CSS v4)**: Powers the fast, highly interactive client interface and fluid map visualizations.
+*   **FastAPI**: A high-performance, asynchronous Python web framework for serving safety routes and managing WebSockets.
+
+### Geospatial & Spatial Math Libraries
+*   **Leaflet.js**: Enables client-side interactive map renders, polyline styling, and custom safety overlay layers.
+*   **NetworkX**: Used on the backend to construct and query the directed routing graph.
+*   **OSMnx**: Scrapes and models OpenStreetMap road networks.
+*   **SciPy (cKDTree)**: Performs extremely fast 2D spatial queries to snap raw GPS coordinates to the nearest graph node.
+*   **Shapely**: Handles coordinate calculations and geometry manipulation.
+
+### Databases & Brokers
+*   **PostgreSQL + PostGIS**: Stores spatial geometry columns, node coordinates, and safety asset records.
+*   **Redis**: Used for routing calculations caching and as the message broker for background tasks.
+*   **Celery**: Executes async tasks like rebuilding the routing graph or recalculating regional safety heatmaps.
+
+### Third-Party APIs
+*   **Twilio SMS API**: Handles real-time emergency dispatch alerts to trusted contacts.
+*   **OpenStreetMap (OSM) / Overpass API**: Feeds physical street network layouts and infrastructure node locations.
+*   **HTML5 Geolocation API**: Dispatches live tracking coords from the user's browser device.
 
 ---
 
@@ -156,7 +219,7 @@ To run the platform, you need a running PostGIS database and Redis server. We pa
     ```bash
     poetry run uvicorn app.main:app --reload --port 8000
     ```
-    *The API will start running at `http://localhost:8000`.*
+    *The backend will run on `http://localhost:8000`.*
 
 ---
 
@@ -174,7 +237,7 @@ To run the platform, you need a running PostGIS database and Redis server. We pa
     ```bash
     npm run dev
     ```
-    *The web application will open at `http://localhost:3000`.*
+    *Open `http://localhost:3000` in your browser to run the application.*
 
 ---
 
@@ -199,18 +262,33 @@ The backend includes tools to scrape OpenStreetMap data for Bengaluru and genera
 
 ---
 
-## 🧮 Safety-Weighted Scoring Engine
+## 🧮 Safety-Weighted Scoring Engine & Routing Math
 
+### Safety Score Calculation
 The safety score ($S$) of each road segment is computed dynamically as a weighted sum of positive safety attributes minus penalties for negative attributes, bound between $[0, 100]$:
 
 $$S = \text{clamp}\left( w_1 \cdot \text{Lighting} + w_2 \cdot \text{CCTV} + w_3 \cdot \text{Crowd} + w_4 \cdot \text{Emergency} - \text{Crime Penalty}, \, 0, \, 100 \right)$$
 
-### Factor Weights:
-*   **Lighting ($w_1 = 0.35$)**: Streetlight density and luminosity.
-*   **CCTV ($w_2 = 0.25$)**: Camera density and intersection coverage.
+#### Factor Weights:
+*   **Lighting ($w_1 = 0.35$)**: Streetlight density and average luminosity.
+*   **CCTV ($w_2 = 0.25$)**: Active camera count and intersection coverage.
 *   **Crowd ($w_3 = 0.20$)**: Pedestrian densities, based on live signals and venue check-ins.
 *   **Emergency ($w_4 = 0.20$)**: Proximity to police stations, health clinics, and help hubs.
 *   **Crime Penalty**: Computed based on historical incidents near the segment.
+
+---
+
+### Safety-Cost Routing Function
+To calculate the path, we override the standard Dijkstra path-finding weight (which normally just checks distance or travel time) by incorporating the segment's safety score into the cost calculation.
+
+The adjusted cost ($C$) for walking along a road segment of length $L$ is calculated as:
+
+$$C = L \cdot \left(1 + \beta \cdot \left(1 - \frac{S}{100}\right)\right)$$
+
+Where **$\beta$** represents the **Safety Influence Coefficient**:
+*   **Safest Route ($\beta = 10.0$)**: High penalty for lower safety scores. The router will add up to a 10x virtual length penalty to detour around unsafe roads.
+*   **Balanced Route ($\beta = 2.0$)**: Moderately weighs safety and distance.
+*   **Fastest Route ($\beta = 0.0$)**: Ignores safety entirely ($C = L$). Returns the shortest path.
 
 ---
 

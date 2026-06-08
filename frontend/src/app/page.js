@@ -175,6 +175,16 @@ export default function Home() {
     return () => clearInterval(playInterval);
   }, [navigationActive, currentCoords]);
 
+  // Auto-switch selected route if the current selectedRoute is not available in routeInfo
+  useEffect(() => {
+    if (routeInfo && !routeInfo[selectedRoute]) {
+      const keys = Object.keys(routeInfo);
+      if (keys.length > 0) {
+        setSelectedRoute(keys[0]);
+      }
+    }
+  }, [routeInfo, selectedRoute]);
+
   const initiateSOS = () => {
     setSosCountdown(3);
     setSosStatus('countdown');
@@ -227,7 +237,9 @@ export default function Home() {
     );
   };
 
-  const currentRoute = routeInfo ? (routeInfo[selectedRoute] || routeInfo.safest) : { distance: '-- km', time: '-- min', safety: 0 };
+  const currentRoute = routeInfo 
+    ? (routeInfo[selectedRoute] || routeInfo.safest || routeInfo.balanced || routeInfo.fastest || { distance: '-- km', time: '-- min', safety: 0 }) 
+    : { distance: '-- km', time: '-- min', safety: 0 };
 
   return (
     <div className="bg-background text-on-surface font-sans overflow-hidden h-screen flex flex-col">
@@ -373,100 +385,106 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  <div 
-                    onClick={() => setSelectedRoute('safest')}
-                    className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                      selectedRoute === 'safest' 
-                        ? 'bg-primary/5 border-primary shadow-sm' 
-                        : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
-                          Safest Route
-                          <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
-                        </span>
-                        <span className="text-xs text-on-surface-variant block mt-0.5">
-                          {routeInfo.safest.distance} • {routeInfo.safest.time}
-                        </span>
+                  {routeInfo.safest && (
+                    <div 
+                      onClick={() => setSelectedRoute('safest')}
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
+                        selectedRoute === 'safest' 
+                          ? 'bg-primary/5 border-primary shadow-sm' 
+                          : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
+                            Safest Route
+                            <span className="material-symbols-outlined text-primary text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield</span>
+                          </span>
+                          <span className="text-xs text-on-surface-variant block mt-0.5">
+                            {routeInfo.safest.distance} • {routeInfo.safest.time}
+                          </span>
+                        </div>
+                        <div className="bg-primary text-white font-black px-2.5 py-1 rounded-xl text-sm shadow-sm">
+                          {routeInfo.safest.safety}
+                        </div>
                       </div>
-                      <div className="bg-primary text-white font-black px-2.5 py-1 rounded-xl text-sm shadow-sm">
-                        {routeInfo.safest.safety}
-                      </div>
+                      
+                      {selectedRoute === 'safest' && (
+                        <div className="mt-3.5 pt-3.5 border-t border-primary/10 grid grid-cols-3 gap-1.5">
+                          <div className="text-center">
+                            <span className="block text-[9px] uppercase text-on-surface-variant font-bold">Lighting</span>
+                            <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.lighting || '9/10'}</span>
+                          </div>
+                          <div className="text-center border-x border-primary/10">
+                            <span className="block text-[9px] uppercase text-on-surface-variant font-bold">CCTV</span>
+                            <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.cctv || '8/10'}</span>
+                          </div>
+                          <div className="text-center">
+                            <span className="block text-[9px] uppercase text-on-surface-variant font-bold">Density</span>
+                            <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.density || 'High'}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    
-                    {selectedRoute === 'safest' && (
-                      <div className="mt-3.5 pt-3.5 border-t border-primary/10 grid grid-cols-3 gap-1.5">
-                        <div className="text-center">
-                          <span className="block text-[9px] uppercase text-on-surface-variant font-bold">Lighting</span>
-                          <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.lighting || '9/10'}</span>
-                        </div>
-                        <div className="text-center border-x border-primary/10">
-                          <span className="block text-[9px] uppercase text-on-surface-variant font-bold">CCTV</span>
-                          <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.cctv || '8/10'}</span>
-                        </div>
-                        <div className="text-center">
-                          <span className="block text-[9px] uppercase text-on-surface-variant font-bold">Density</span>
-                          <span className="text-primary font-extrabold text-xs">{routeInfo.safest.details?.density || 'High'}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  <div 
-                    onClick={() => setSelectedRoute('balanced')}
-                    className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                      selectedRoute === 'balanced' 
-                        ? 'bg-amber-500/5 border-amber-500 shadow-sm' 
-                        : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
-                          Balanced Route
-                          <span className="material-symbols-outlined text-amber-500 text-[18px]">balance</span>
-                        </span>
-                        <span className="text-xs text-on-surface-variant block mt-0.5">
-                          {routeInfo.balanced.distance} • {routeInfo.balanced.time}
-                        </span>
-                      </div>
-                      <div className="bg-amber-500/10 text-amber-700 font-extrabold px-2.5 py-1 rounded-xl text-sm">
-                        {routeInfo.balanced.safety}
+                  {routeInfo.balanced && (
+                    <div 
+                      onClick={() => setSelectedRoute('balanced')}
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
+                        selectedRoute === 'balanced' 
+                          ? 'bg-amber-500/5 border-amber-500 shadow-sm' 
+                          : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
+                            Balanced Route
+                            <span className="material-symbols-outlined text-amber-500 text-[18px]">balance</span>
+                          </span>
+                          <span className="text-xs text-on-surface-variant block mt-0.5">
+                            {routeInfo.balanced.distance} • {routeInfo.balanced.time}
+                          </span>
+                        </div>
+                        <div className="bg-amber-500/10 text-amber-700 font-extrabold px-2.5 py-1 rounded-xl text-sm">
+                          {routeInfo.balanced.safety}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div 
-                    onClick={() => setSelectedRoute('fastest')}
-                    className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                      selectedRoute === 'fastest' 
-                        ? 'bg-error/5 border-error shadow-sm' 
-                        : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
-                          Fastest Route
-                          <span className="material-symbols-outlined text-error text-[18px]">speed</span>
-                        </span>
-                        <span className="text-xs text-on-surface-variant block mt-0.5">
-                          {routeInfo.fastest.distance} • {routeInfo.fastest.time}
-                        </span>
+                  {routeInfo.fastest && (
+                    <div 
+                      onClick={() => setSelectedRoute('fastest')}
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
+                        selectedRoute === 'fastest' 
+                          ? 'bg-error/5 border-error shadow-sm' 
+                          : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <span className="font-bold text-on-surface text-[15px] flex items-center gap-1.5">
+                            Fastest Route
+                            <span className="material-symbols-outlined text-error text-[18px]">speed</span>
+                          </span>
+                          <span className="text-xs text-on-surface-variant block mt-0.5">
+                            {routeInfo.fastest.distance} • {routeInfo.fastest.time}
+                          </span>
+                        </div>
+                        <div className="bg-error/10 text-error font-extrabold px-2.5 py-1 rounded-xl text-sm">
+                          {routeInfo.fastest.safety}
+                        </div>
                       </div>
-                      <div className="bg-error/10 text-error font-extrabold px-2.5 py-1 rounded-xl text-sm">
-                        {routeInfo.fastest.safety}
-                      </div>
+                      {selectedRoute === 'fastest' && (
+                        <div className="mt-3 bg-error/10 text-error px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">warning</span>
+                          Low streetlight coverage detected
+                        </div>
+                      )}
                     </div>
-                    {selectedRoute === 'fastest' && (
-                      <div className="mt-3 bg-error/10 text-error px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">warning</span>
-                        Low streetlight coverage detected
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -579,7 +597,7 @@ export default function Home() {
                       {directions[navigationStep]?.instruction || 'Proceed along path'}
                     </p>
                     {directions[navigationStep]?.distance > 0 && (
-                      <p className="text-xs text-white/75 font-semibold mt-1">In {directions[navigationStep].distance} meters</p>
+                      <p className="text-xs text-white/75 font-semibold mt-1">In {directions[navigationStep]?.distance} meters</p>
                     )}
                   </div>
                 </div>
@@ -602,7 +620,13 @@ export default function Home() {
                       <span className="dot-pulse w-2 h-2 bg-white rounded-full"></span>
                       GPS Tracking active
                     </span>
-                    <span>Destination in {Math.max(1, Math.round(currentRoute.time.split(' ')[0] * (1 - (navigationStep / directions.length))))} mins</span>
+                    <span>
+                      Destination in {
+                        (currentRoute?.time && currentRoute.time !== '-- min' && directions.length > 0)
+                          ? Math.max(1, Math.round(parseFloat(currentRoute.time.split(' ')[0]) * (1 - (navigationStep / directions.length))))
+                          : '--'
+                      } mins
+                    </span>
                   </div>
                 </div>
 

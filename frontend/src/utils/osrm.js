@@ -33,8 +33,8 @@ export async function fetchOSRMRoutes(source, destination, profile = 'foot') {
     }
 
     return data.routes.map(route => {
-      // Convert OSRM [lng, lat] to Leaflet [lat, lng]
-      const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+      // Keep OSRM [lng, lat] for MapLibre
+      const coordinates = route.geometry.coordinates;
       
       // Extract step-by-step directions
       const steps = [];
@@ -51,7 +51,7 @@ export async function fetchOSRMRoutes(source, destination, profile = 'foot') {
                   modifier: step.maneuver.modifier,
                   name: step.name || '',
                   coord: step.maneuver.location 
-                    ? [step.maneuver.location[1], step.maneuver.location[0]] 
+                    ? [step.maneuver.location[0], step.maneuver.location[1]] 
                     : null,
                 });
               }

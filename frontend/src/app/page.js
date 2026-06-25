@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Map from '../components/Map/Map';
 import { fetchRoutes, triggerSOSEmergency } from '../utils/api';
-import { getDistance } from '../utils/navigation';
+import { getDistance, getBearing } from '../utils/navigation';
 import { fetchOSRMRoutes, getStepIcon } from '../utils/osrm';
 
 export default function Home() {
@@ -15,6 +15,7 @@ export default function Home() {
   const [navigationActive, setNavigationActive] = useState(false);
   const [navigationStep, setNavigationStep] = useState(0);
   const [simulatedCoords, setSimulatedCoords] = useState(null);
+  const [currentBearing, setCurrentBearing] = useState(0);
   const [userLocation, setUserLocation] = useState(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [toast, setToast] = useState(null);
@@ -247,8 +248,8 @@ export default function Home() {
           if (r.geojson?.features) {
             r.geojson.features.forEach(f => {
               if (f.geometry?.coordinates) {
-                if (f.geometry.type === 'LineString') f.geometry.coordinates.forEach(pt => coords.push([pt[1], pt[0]]));
-                else if (f.geometry.type === 'Point') coords.push([f.geometry.coordinates[1], f.geometry.coordinates[0]]);
+                if (f.geometry.type === 'LineString') f.geometry.coordinates.forEach(pt => coords.push([pt[0], pt[1]]));
+                else if (f.geometry.type === 'Point') coords.push([f.geometry.coordinates[0], f.geometry.coordinates[1]]);
               }
             });
           }
@@ -301,6 +302,15 @@ export default function Home() {
       setNavigationStep(closestIdx);
     }
 
+    // Update bearing based on next waypoint
+    if (closestIdx < directions.length) {
+      const nextStep = directions[closestIdx];
+      if (nextStep.coord) {
+        // userLocation is [lat, lng], step.coord is [lng, lat]
+        setCurrentBearing(getBearing(userLocation[0], userLocation[1], nextStep.coord[1], nextStep.coord[0]));
+      }
+    }
+
     // Check if user reached the destination (within 30m of last step)
     const lastStep = directions[directions.length - 1];
     if (lastStep?.coord) {
@@ -349,7 +359,12 @@ export default function Home() {
 
   const handleStartNavigation = () => {
     setNavigationStep(0);
-    setSimulatedCoords(currentCoords[0]);
+    setSimulatedCoords(currentCoords[0]); // [lng, lat]
+    if (currentCoords.length > 1) {
+      setCurrentBearing(getBearing(currentCoords[0][1], currentCoords[0][0], currentCoords[1][1], currentCoords[1][0]));
+    } else {
+      setCurrentBearing(0);
+    }
     setNavigationActive(true);
   };
 
@@ -749,6 +764,7 @@ export default function Home() {
             userLocation={userLocation}
             navigationPosition={simulatedCoords}
             navigationActive={navigationActive}
+            currentBearing={currentBearing}
             path={currentCoords}
           />
 

@@ -110,7 +110,8 @@ export default function DynamicMap({
                 weight: 6, 
                 opacity: 0.85,
                 lineJoin: 'round',
-                lineCap: 'round'
+                lineCap: 'round',
+                smoothFactor: 1
               }} 
             />
             
@@ -121,7 +122,8 @@ export default function DynamicMap({
                 weight: 14, 
                 opacity: 0.2,
                 lineJoin: 'round',
-                lineCap: 'round'
+                lineCap: 'round',
+                smoothFactor: 1
               }} 
             />
 

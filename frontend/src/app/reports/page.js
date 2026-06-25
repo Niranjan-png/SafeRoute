@@ -10,15 +10,31 @@ export default function Reports() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSosConfirm, setShowSosConfirm] = useState(false);
   const [toast, setToast] = useState(null);
+  const [isSampleData, setIsSampleData] = useState(false);
   
   const [reportType, setReportType] = useState('Broken Streetlight');
   const [description, setDescription] = useState('');
   const [locationText, setLocationText] = useState('Indiranagar 12th Main Road');
 
+  const SAMPLE_REPORTS = [
+    { id: 's1', type: 'Broken Streetlight', report_type: 'broken_streetlight', location: 'Koramangala 80 Feet Road', description: 'Two streetlights near the Forum Mall junction have been out for 3 days. Very dark after 8 PM, especially near the service road.', time: '25 min ago', verifiedCount: 14, verifiedByUser: false },
+    { id: 's2', type: 'Suspicious Activity', report_type: 'suspicious_activity', location: 'Indiranagar 12th Main Road', description: 'Group of unknown individuals loitering near the abandoned construction site every night after 10 PM. Multiple residents have reported feeling unsafe.', time: '1 hr ago', verifiedCount: 23, verifiedByUser: false },
+    { id: 's3', type: 'Poorly Lit Area', report_type: 'poorly_lit_area', location: 'HSR Layout Sector 2', description: 'The entire stretch from 27th Main to Agara Lake has poor lighting. Women avoid walking here after sunset.', time: '2 hrs ago', verifiedCount: 31, verifiedByUser: false },
+    { id: 's4', type: 'Broken Streetlight', report_type: 'broken_streetlight', location: 'Jayanagar 4th Block', description: 'Streetlight pole damaged by a fallen tree branch during last week\'s storm. BBMP notified but no action taken.', time: '3 hrs ago', verifiedCount: 8, verifiedByUser: false },
+    { id: 's5', type: 'Suspicious Activity', report_type: 'suspicious_activity', location: 'Majestic Bus Station (Platform 6)', description: 'Pickpocketing incidents reported near Platform 6 during late evening hours. Be cautious with belongings.', time: '5 hrs ago', verifiedCount: 19, verifiedByUser: false },
+    { id: 's6', type: 'Poorly Lit Area', report_type: 'poorly_lit_area', location: 'MG Road underpass near Trinity Circle', description: 'The pedestrian underpass has broken lights inside. Very unsafe for solo walkers, especially at night.', time: '6 hrs ago', verifiedCount: 27, verifiedByUser: false },
+  ];
+
   useEffect(() => {
     async function loadReports() {
       const data = await fetchNearbyReports(12.9610, 77.5655);
-      setReports(data);
+      if (data && data.length > 0) {
+        setReports(data);
+        setIsSampleData(false);
+      } else {
+        setReports(SAMPLE_REPORTS);
+        setIsSampleData(true);
+      }
     }
     loadReports();
   }, []);
@@ -178,6 +194,15 @@ export default function Reports() {
                 <p className="text-xs font-semibold leading-relaxed">Avoid the Indiranagar bypass route after 11 PM due to streetlight maintenance.</p>
               </div>
             </div>
+
+            {isSampleData && (
+              <div className="bg-primary/5 border border-primary/15 rounded-2xl p-3.5 mb-4 flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-[20px]">info</span>
+                <p className="text-xs text-on-surface-variant font-semibold">
+                  Showing <span className="text-primary font-bold">sample reports</span> — Live community feed will activate when the database is connected.
+                </p>
+              </div>
+            )}
 
             <section className="space-y-4">
               {reports.map((report) => (

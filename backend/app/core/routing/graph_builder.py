@@ -225,12 +225,21 @@ class GraphBuilder:
             lat1, lng1 = self.node_coords[edge_a]
             lat2, lng2 = self.node_coords[edge_b]
 
-            n_intermediate = 3
+            n_intermediate = 8
             prev_node = edge_a
+            # Compute perpendicular direction for lateral offsets
+            dlat = lat2 - lat1
+            dlng = lng2 - lng1
+            length = (dlat**2 + dlng**2) ** 0.5
+            perp_lat = -dlng / length if length > 0 else 0
+            perp_lng = dlat / length if length > 0 else 0
             for i in range(1, n_intermediate + 1):
                 frac = i / (n_intermediate + 1)
-                lat_i = lat1 + frac * (lat2 - lat1)
-                lng_i = lng1 + frac * (lng2 - lng1)
+                # Lateral offset: sine-wave pattern with randomness for road-like curves
+                import math
+                lateral = 0.0015 * math.sin(frac * math.pi * 2) + random.uniform(-0.0008, 0.0008)
+                lat_i = lat1 + frac * (lat2 - lat1) + lateral * perp_lat
+                lng_i = lng1 + frac * (lng2 - lng1) + lateral * perp_lng
                 mid_node = node_id_counter
                 node_id_counter += 1
                 self.node_coords[mid_node] = (lat_i, lng_i)

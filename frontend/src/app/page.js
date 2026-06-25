@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Map from '../components/Map/Map';
 import { fetchRoutes, triggerSOSEmergency } from '../utils/api';
-import { generateDirections, getDistance } from '../utils/navigation';
+import { getDistance } from '../utils/navigation';
+import { fetchOSRMRoutes, getStepIcon } from '../utils/osrm';
 
 export default function Home() {
   const [selectedRoute, setSelectedRoute] = useState('safest');
@@ -19,16 +20,87 @@ export default function Home() {
   const [toast, setToast] = useState(null);
   const [showDirectionsList, setShowDirectionsList] = useState(false);
 
+  // Source location mode: 'gps' or 'manual'
+  const [sourceMode, setSourceMode] = useState('gps');
+  const [sourceText, setSourceText] = useState('');
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+  const [resolvedSource, setResolvedSource] = useState(null);
+
+  const BENGALURU_LANDMARKS = {
+    'BMS College of Engineering': { lat: 12.9410, lng: 77.5655 },
+    'Koramangala': { lat: 12.9352, lng: 77.6245 },
+    'Indiranagar': { lat: 12.9784, lng: 77.6408 },
+    'Indiranagar Metro Station': { lat: 12.9784, lng: 77.6408 },
+    'MG Road': { lat: 12.9756, lng: 77.6068 },
+    'MG Road Metro': { lat: 12.9756, lng: 77.6068 },
+    'Whitefield': { lat: 12.9698, lng: 77.7500 },
+    'Majestic': { lat: 12.9716, lng: 77.5946 },
+    'Majestic Bus Station': { lat: 12.9716, lng: 77.5946 },
+    'JP Nagar': { lat: 12.9063, lng: 77.5857 },
+    'HSR Layout': { lat: 12.9116, lng: 77.6389 },
+    'Jayanagar': { lat: 12.9250, lng: 77.5838 },
+    'Brigade Road': { lat: 12.9730, lng: 77.6070 },
+    'Church Street': { lat: 12.9750, lng: 77.6060 },
+    'Cubbon Park': { lat: 12.9763, lng: 77.5929 },
+    'Lalbagh': { lat: 12.9507, lng: 77.5848 },
+    'Bannerghatta Road': { lat: 12.9063, lng: 77.5970 },
+  };
+
+  const handleSourceTextChange = (text) => {
+    setSourceText(text);
+    if (text.length > 1) {
+      const matches = Object.keys(BENGALURU_LANDMARKS).filter(name =>
+        name.toLowerCase().includes(text.toLowerCase())
+      );
+      setSourceSuggestions(matches.slice(0, 5));
+    } else {
+      setSourceSuggestions([]);
+    }
+    // Clear resolved source if text changed
+    setResolvedSource(null);
+  };
+
+  const selectSourceSuggestion = (name) => {
+    setSourceText(name);
+    setResolvedSource(BENGALURU_LANDMARKS[name]);
+    setSourceSuggestions([]);
+  };
+
+  // Destination state
+  const [destinationText, setDestinationText] = useState('Indiranagar Metro Station');
+  const [destinationSuggestions, setDestinationSuggestions] = useState([]);
+  const [resolvedDestination, setResolvedDestination] = useState({ lat: 12.9784, lng: 77.6408 });
+
+  const handleDestinationTextChange = (text) => {
+    setDestinationText(text);
+    if (text.length > 1) {
+      const matches = Object.keys(BENGALURU_LANDMARKS).filter(name =>
+        name.toLowerCase().includes(text.toLowerCase())
+      );
+      setDestinationSuggestions(matches.slice(0, 5));
+    } else {
+      setDestinationSuggestions([]);
+    }
+    setResolvedDestination(null);
+  };
+
+  const selectDestinationSuggestion = (name) => {
+    setDestinationText(name);
+    setResolvedDestination(BENGALURU_LANDMARKS[name]);
+    setDestinationSuggestions([]);
+  };
+
   const [routeInfo, setRouteInfo] = useState(null);
   const [routePaths, setRoutePaths] = useState({
     safest: [],
     balanced: [],
     fastest: []
   });
+  const [osrmDirections, setOsrmDirections] = useState({ safest: [], balanced: [], fastest: [] });
   const [lastFetchCoords, setLastFetchCoords] = useState(null);
 
   const currentCoords = routePaths[selectedRoute] || [];
-  const directions = generateDirections(currentCoords, selectedRoute);
+  const directions = osrmDirections[selectedRoute] || [];
 
   // Set up real-time geolocation tracking with watchPosition
   useEffect(() => {
@@ -68,61 +140,114 @@ export default function Home() {
     };
   }, []);
 
-  // Fetch routing whenever transit mode or location changes
+  // Fetch routing whenever transit mode, location, source, or destination changes
   useEffect(() => {
     async function loadRoutes() {
-      const source = userLocation 
-        ? { lat: userLocation[0], lng: userLocation[1] } 
-        : { lat: 12.9610, lng: 77.5655 };
-      const destination = { lat: 12.9784, lng: 77.6408 };
+      let source;
+      if (sourceMode === 'manual' && resolvedSource) {
+        source = resolvedSource;
+      } else if (userLocation) {
+        source = { lat: userLocation[0], lng: userLocation[1] };
+      } else {
+        source = { lat: 12.9610, lng: 77.5655 };
+      }
+      const destination = resolvedDestination || { lat: 12.9784, lng: 77.6408 };
 
-      // Prevent redundant fetches if movement is minor (under 50m)
-      if (lastFetchCoords && userLocation) {
+      // Prevent redundant fetches if movement is minor (under 50m) — only in GPS mode
+      if (sourceMode === 'gps' && lastFetchCoords && userLocation) {
         const dist = getDistance(lastFetchCoords[0], lastFetchCoords[1], userLocation[0], userLocation[1]);
         if (dist < 50) return;
       }
 
+      // Fetch safety scores from backend
       const data = await fetchRoutes(source, destination);
-      if (data && data.routes && data.routes.length > 0) {
+      
+      // Fetch real road-following routes from OSRM
+      const osrmRoutes = await fetchOSRMRoutes(source, destination, transitMode);
+
+      if (osrmRoutes && osrmRoutes.length > 0) {
+        // Use OSRM for road geometry, backend for safety scores
+        const labels = ['safest', 'balanced', 'fastest'];
+        const info = {};
+        const paths = { safest: [], balanced: [], fastest: [] };
+        const dirs = { safest: [], balanced: [], fastest: [] };
+
+        // Get safety scores from backend if available
+        const backendRoutes = data?.routes || [];
+
+        osrmRoutes.forEach((osrmRoute, idx) => {
+          const label = labels[Math.min(idx, labels.length - 1)];
+          // Avoid overwriting if we already assigned this label
+          if (info[label]) return;
+
+          // Get matching backend safety data or generate from index
+          const backendRoute = backendRoutes[idx];
+          let safetyScore = backendRoute ? backendRoute.safety_score : (85 - idx * 15);
+          let baseSafety = safetyScore;
+          let speedFactor = 1.0;
+
+          if (transitMode === 'biking') {
+            speedFactor = 0.35;
+            baseSafety = Math.max(30, safetyScore - 5);
+          } else if (transitMode === 'driving') {
+            speedFactor = 0.15;
+            baseSafety = Math.min(95, safetyScore + 10);
+          }
+
+          info[label] = {
+            distance: (osrmRoute.distance_m / 1000).toFixed(1) + ' km',
+            time: Math.max(1, Math.round((osrmRoute.duration_s * (transitMode === 'walking' ? 1 : speedFactor)) / 60)) + ' min',
+            safety: Math.round(baseSafety),
+            details: backendRoute?.details || {
+              lighting: `${Math.round(baseSafety / 10)}/10`,
+              cctv: `${Math.round(Math.max(10, baseSafety - 10) / 10)}/10`,
+              density: baseSafety > 70 ? 'High' : baseSafety > 40 ? 'Medium' : 'Low'
+            }
+          };
+
+          paths[label] = osrmRoute.coordinates;
+
+          // Use OSRM's step-by-step directions
+          dirs[label] = osrmRoute.steps
+            .filter(s => s.type !== 'arrive' || s.distance > 0)
+            .map(s => ({
+              instruction: s.instruction,
+              distance: s.distance,
+              icon: getStepIcon(s),
+              street: s.name,
+              coord: s.coord,
+            }));
+        });
+
+        setRouteInfo(info);
+        setRoutePaths(paths);
+        setOsrmDirections(dirs);
+        if (userLocation) {
+          setLastFetchCoords(userLocation);
+        }
+      } else if (data && data.routes && data.routes.length > 0) {
+        // Fallback to backend paths if OSRM fails
         const info = {};
         const paths = { safest: [], balanced: [], fastest: [] };
         data.routes.forEach(r => {
           const label = r.safety_label === 'green' ? 'safest' : r.safety_label === 'amber' ? 'balanced' : 'fastest';
-          
           let speedFactor = 1.0;
           let baseSafety = r.safety_score;
-          if (transitMode === 'biking') {
-            speedFactor = 0.35;
-            baseSafety = Math.max(30, r.safety_score - 5);
-          } else if (transitMode === 'driving') {
-            speedFactor = 0.15;
-            baseSafety = Math.min(95, r.safety_score + 10);
-          }
+          if (transitMode === 'biking') { speedFactor = 0.35; baseSafety = Math.max(30, r.safety_score - 5); }
+          else if (transitMode === 'driving') { speedFactor = 0.15; baseSafety = Math.min(95, r.safety_score + 10); }
 
           info[label] = {
             distance: (r.distance_m / 1000).toFixed(1) + ' km',
             time: Math.round((r.eta_seconds * speedFactor) / 60) + ' min',
             safety: Math.round(baseSafety),
-            details: r.details || { 
-              lighting: `${Math.round(r.safety_score / 10)}/10`, 
-              cctv: `${Math.round(Math.max(10, r.safety_score - 10) / 10)}/10`, 
-              density: r.safety_score > 70 ? 'High' : r.safety_score > 40 ? 'Medium' : 'Low' 
-            }
+            details: r.details || { lighting: `${Math.round(r.safety_score / 10)}/10`, cctv: `${Math.round(Math.max(10, r.safety_score - 10) / 10)}/10`, density: r.safety_score > 70 ? 'High' : r.safety_score > 40 ? 'Medium' : 'Low' }
           };
-
           const coords = [];
-          if (r.geojson && r.geojson.features) {
-            r.geojson.features.forEach(feature => {
-              if (feature.geometry && feature.geometry.coordinates) {
-                const geomType = feature.geometry.type;
-                if (geomType === 'LineString') {
-                  feature.geometry.coordinates.forEach(pt => {
-                    coords.push([pt[1], pt[0]]);
-                  });
-                } else if (geomType === 'Point') {
-                  const pt = feature.geometry.coordinates;
-                  coords.push([pt[1], pt[0]]);
-                }
+          if (r.geojson?.features) {
+            r.geojson.features.forEach(f => {
+              if (f.geometry?.coordinates) {
+                if (f.geometry.type === 'LineString') f.geometry.coordinates.forEach(pt => coords.push([pt[1], pt[0]]));
+                else if (f.geometry.type === 'Point') coords.push([f.geometry.coordinates[1], f.geometry.coordinates[0]]);
               }
             });
           }
@@ -130,16 +255,14 @@ export default function Home() {
         });
         setRouteInfo(info);
         setRoutePaths(paths);
-        if (userLocation) {
-          setLastFetchCoords(userLocation);
-        }
+        if (userLocation) setLastFetchCoords(userLocation);
       } else {
         setRouteInfo(null);
         setRoutePaths({ safest: [], balanced: [], fastest: [] });
       }
     }
     loadRoutes();
-  }, [transitMode, userLocation]);
+  }, [transitMode, userLocation, sourceMode, resolvedSource, resolvedDestination]);
 
   useEffect(() => {
     let timer;
@@ -153,27 +276,45 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [sosStatus, sosCountdown]);
 
+  // GPS-based navigation: track real user position along the route
   useEffect(() => {
-    let playInterval;
-    if (navigationActive) {
-      playInterval = setInterval(() => {
-        setNavigationStep(step => {
-          const nextStep = step + 1;
-          if (nextStep < currentCoords.length) {
-            setSimulatedCoords(currentCoords[nextStep]);
-            return nextStep;
-          } else {
-            setNavigationActive(false);
-            setSimulatedCoords(null);
-            setToast('Arrived safely at Indiranagar Metro!');
-            setTimeout(() => setToast(null), 4000);
-            return 0;
-          }
-        });
-      }, 3000);
+    if (!navigationActive || !userLocation || !directions.length) return;
+
+    // Find the closest direction step to the user's current GPS position
+    let closestIdx = navigationStep;
+    let minDist = Infinity;
+
+    for (let i = navigationStep; i < directions.length; i++) {
+      const step = directions[i];
+      if (step.coord) {
+        const d = getDistance(userLocation[0], userLocation[1], step.coord[0], step.coord[1]);
+        if (d < minDist) {
+          minDist = d;
+          closestIdx = i;
+        }
+      }
     }
-    return () => clearInterval(playInterval);
-  }, [navigationActive, currentCoords]);
+
+    // Advance to next step if user is within 30m of the next waypoint
+    if (closestIdx > navigationStep && minDist < 50) {
+      setNavigationStep(closestIdx);
+    }
+
+    // Check if user reached the destination (within 30m of last step)
+    const lastStep = directions[directions.length - 1];
+    if (lastStep?.coord) {
+      const distToEnd = getDistance(userLocation[0], userLocation[1], lastStep.coord[0], lastStep.coord[1]);
+      if (distToEnd < 30) {
+        setNavigationActive(false);
+        setSimulatedCoords(null);
+        setToast(`Arrived safely at ${destinationText}!`);
+        setTimeout(() => setToast(null), 4000);
+      }
+    }
+
+    // Update navigation position to user's real location
+    setSimulatedCoords(userLocation);
+  }, [navigationActive, userLocation, directions, navigationStep]);
 
   // Auto-switch selected route if the current selectedRoute is not available in routeInfo
   useEffect(() => {
@@ -323,41 +464,126 @@ export default function Home() {
             </div>
 
             <div className="space-y-4 relative before:absolute before:left-[21px] before:top-6 before:bottom-6 before:w-[2px] before:bg-outline-variant/30">
-              <div className="relative flex gap-4 items-center">
-                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 z-10 shadow-sm">
+              <div className="relative flex gap-4 items-start">
+                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
                   <span className="material-symbols-outlined text-primary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
                 </div>
                 <div className="flex-1">
-                  <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider block mb-1">Starting Point</span>
-                  <div className="relative flex items-center">
-                    <input 
-                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface/85 cursor-pointer outline-none" 
-                      onClick={requestLocationPermission}
-                      readOnly 
-                      type="text" 
-                      value={locationPermission === 'granted' ? "Live Location Connected" : "BMS College of Engineering"}
-                    />
-                    <button 
-                      onClick={requestLocationPermission}
-                      className="absolute right-2.5 text-primary hover:bg-primary/5 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">gps_fixed</span>
-                    </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Starting Point</span>
+                    <div className="flex items-center bg-surface-container-low rounded-lg border border-outline-variant/15 p-0.5 gap-0.5">
+                      <button
+                        onClick={() => { setSourceMode('gps'); setSourceSuggestions([]); }}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                          sourceMode === 'gps' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">gps_fixed</span>
+                        GPS
+                      </button>
+                      <button
+                        onClick={() => setSourceMode('manual')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                          sourceMode === 'manual' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[12px]">edit</span>
+                        Manual
+                      </button>
+                    </div>
+                  </div>
+                  <div className="relative">
+                    {sourceMode === 'gps' ? (
+                      <div className="relative flex items-center">
+                        <input 
+                          className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface/85 cursor-pointer outline-none" 
+                          onClick={requestLocationPermission}
+                          readOnly 
+                          type="text" 
+                          value={locationPermission === 'granted' ? "Live Location Connected" : "BMS College of Engineering"}
+                        />
+                        <button 
+                          onClick={requestLocationPermission}
+                          className="absolute right-2.5 text-primary hover:bg-primary/5 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">gps_fixed</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input 
+                          className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
+                          type="text" 
+                          placeholder="Type a Bengaluru location..."
+                          value={sourceText}
+                          onChange={(e) => handleSourceTextChange(e.target.value)}
+                          autoFocus
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+                        {sourceSuggestions.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
+                            {sourceSuggestions.map((name) => (
+                              <button
+                                key={name}
+                                onClick={() => selectSourceSuggestion(name)}
+                                className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
+                              >
+                                <span className="material-symbols-outlined text-primary text-[16px]">location_on</span>
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {resolvedSource && (
+                          <div className="mt-1.5 flex items-center gap-1 text-[10px] text-primary font-bold">
+                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                            Location set — {resolvedSource.lat.toFixed(4)}, {resolvedSource.lng.toFixed(4)}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="relative flex gap-4 items-center">
-                <div className="w-11 h-11 rounded-full bg-error/10 flex items-center justify-center shrink-0 z-10 shadow-sm">
+              <div className="relative flex gap-4 items-start mt-4">
+                <div className="w-11 h-11 rounded-full bg-error/10 flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
                   <span className="material-symbols-outlined text-error text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
                 </div>
                 <div className="flex-1">
                   <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider block mb-1">Destination</span>
-                  <input 
-                    className="w-full bg-white border border-primary/20 rounded-xl px-3 py-2.5 text-sm font-bold text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none" 
-                    type="text" 
-                    defaultValue="Indiranagar Metro Station"
-                  />
+                  <div className="relative mt-2">
+                    <input 
+                      className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
+                      type="text" 
+                      placeholder="Type destination..."
+                      value={destinationText}
+                      onChange={(e) => handleDestinationTextChange(e.target.value)}
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+                    
+                    {destinationSuggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
+                        {destinationSuggestions.map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => selectDestinationSuggestion(name)}
+                            className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-error/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
+                          >
+                            <span className="material-symbols-outlined text-error text-[16px]">location_on</span>
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {resolvedDestination && (
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] text-error font-bold">
+                        <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                        Location set — {resolvedDestination.lat.toFixed(4)}, {resolvedDestination.lng.toFixed(4)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

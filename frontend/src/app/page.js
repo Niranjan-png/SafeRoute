@@ -112,7 +112,7 @@ export default function Home() {
     }
 
     let watchId;
-    
+
     const startWatching = () => {
       watchId = navigator.geolocation.watchPosition(
         (position) => {
@@ -161,7 +161,7 @@ export default function Home() {
 
       // Fetch safety scores from backend
       const data = await fetchRoutes(source, destination);
-      
+
       // Fetch real road-following routes from OSRM
       const osrmRoutes = await fetchOSRMRoutes(source, destination, transitMode);
 
@@ -186,17 +186,18 @@ export default function Home() {
           let baseSafety = safetyScore;
           let speedFactor = 1.0;
 
+          let durationS = osrmRoute.distance_m / 1.4; // walking
           if (transitMode === 'biking') {
-            speedFactor = 0.35;
+            durationS = osrmRoute.distance_m / 4.2;
             baseSafety = Math.max(30, safetyScore - 5);
           } else if (transitMode === 'driving') {
-            speedFactor = 0.15;
+            durationS = osrmRoute.duration_s * 3; // OSRM default is accurate for cars
             baseSafety = Math.min(95, safetyScore + 10);
           }
 
           info[label] = {
             distance: (osrmRoute.distance_m / 1000).toFixed(1) + ' km',
-            time: Math.max(1, Math.round((osrmRoute.duration_s * (transitMode === 'walking' ? 1 : speedFactor)) / 60)) + ' min',
+            time: Math.max(1, Math.round(durationS / 60)) + ' min',
             safety: Math.round(baseSafety),
             details: backendRoute?.details || {
               lighting: `${Math.round(baseSafety / 10)}/10`,
@@ -231,14 +232,14 @@ export default function Home() {
         const paths = { safest: [], balanced: [], fastest: [] };
         data.routes.forEach(r => {
           const label = r.safety_label === 'green' ? 'safest' : r.safety_label === 'amber' ? 'balanced' : 'fastest';
-          let speedFactor = 1.0;
+          let fallbackDurationS = r.distance_m / 1.4;
           let baseSafety = r.safety_score;
-          if (transitMode === 'biking') { speedFactor = 0.35; baseSafety = Math.max(30, r.safety_score - 5); }
-          else if (transitMode === 'driving') { speedFactor = 0.15; baseSafety = Math.min(95, r.safety_score + 10); }
+          if (transitMode === 'biking') { fallbackDurationS = r.distance_m / 4.2; baseSafety = Math.max(30, r.safety_score - 5); }
+          else if (transitMode === 'driving') { fallbackDurationS = r.distance_m / 8.3; baseSafety = Math.min(95, r.safety_score + 10); }
 
           info[label] = {
             distance: (r.distance_m / 1000).toFixed(1) + ' km',
-            time: Math.round((r.eta_seconds * speedFactor) / 60) + ' min',
+            time: Math.max(1, Math.round(fallbackDurationS / 60)) + ' min',
             safety: Math.round(baseSafety),
             details: r.details || { lighting: `${Math.round(r.safety_score / 10)}/10`, cctv: `${Math.round(Math.max(10, r.safety_score - 10) / 10)}/10`, density: r.safety_score > 70 ? 'High' : r.safety_score > 40 ? 'Medium' : 'Low' }
           };
@@ -378,8 +379,8 @@ export default function Home() {
     );
   };
 
-  const currentRoute = routeInfo 
-    ? (routeInfo[selectedRoute] || routeInfo.safest || routeInfo.balanced || routeInfo.fastest || { distance: '-- km', time: '-- min', safety: 0 }) 
+  const currentRoute = routeInfo
+    ? (routeInfo[selectedRoute] || routeInfo.safest || routeInfo.balanced || routeInfo.fastest || { distance: '-- km', time: '-- min', safety: 0 })
     : { distance: '-- km', time: '-- min', safety: 0 };
 
   return (
@@ -404,7 +405,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={initiateSOS}
             className="text-white bg-error hover:bg-error/95 active-interaction px-5 py-2.5 rounded-full font-bold shadow-lg shadow-error/20 flex items-center gap-2 text-[14px] leading-none transition-all"
           >
@@ -413,7 +414,7 @@ export default function Home() {
             </span>
             SOS Alert
           </button>
-          
+
           <Link href="/settings" className="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active-interaction">
             <span className="material-symbols-outlined text-[22px]">account_circle</span>
           </Link>
@@ -434,29 +435,26 @@ export default function Home() {
             </div>
 
             <div className="bg-surface-container-low p-1.5 rounded-2xl flex border border-outline-variant/15 gap-1 shadow-sm">
-              <button 
+              <button
                 onClick={() => setTransitMode('walking')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${
-                  transitMode === 'walking' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${transitMode === 'walking' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">directions_walk</span>
                 Walk
               </button>
-              <button 
+              <button
                 onClick={() => setTransitMode('biking')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${
-                  transitMode === 'biking' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${transitMode === 'biking' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">directions_bike</span>
                 Bike
               </button>
-              <button 
+              <button
                 onClick={() => setTransitMode('driving')}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${
-                  transitMode === 'driving' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
-                }`}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-all active-interaction ${transitMode === 'driving' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">directions_car</span>
                 Drive
@@ -474,18 +472,16 @@ export default function Home() {
                     <div className="flex items-center bg-surface-container-low rounded-lg border border-outline-variant/15 p-0.5 gap-0.5">
                       <button
                         onClick={() => { setSourceMode('gps'); setSourceSuggestions([]); }}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                          sourceMode === 'gps' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${sourceMode === 'gps' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                          }`}
                       >
                         <span className="material-symbols-outlined text-[12px]">gps_fixed</span>
                         GPS
                       </button>
                       <button
                         onClick={() => setSourceMode('manual')}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                          sourceMode === 'manual' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${sourceMode === 'manual' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                          }`}
                       >
                         <span className="material-symbols-outlined text-[12px]">edit</span>
                         Manual
@@ -495,14 +491,14 @@ export default function Home() {
                   <div className="relative">
                     {sourceMode === 'gps' ? (
                       <div className="relative flex items-center">
-                        <input 
-                          className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface/85 cursor-pointer outline-none" 
+                        <input
+                          className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface/85 cursor-pointer outline-none"
                           onClick={requestLocationPermission}
-                          readOnly 
-                          type="text" 
+                          readOnly
+                          type="text"
                           value={locationPermission === 'granted' ? "Live Location Connected" : "BMS College of Engineering"}
                         />
-                        <button 
+                        <button
                           onClick={requestLocationPermission}
                           className="absolute right-2.5 text-primary hover:bg-primary/5 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                         >
@@ -511,9 +507,9 @@ export default function Home() {
                       </div>
                     ) : (
                       <>
-                        <input 
-                          className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
-                          type="text" 
+                        <input
+                          className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                          type="text"
                           placeholder="Type a Bengaluru location..."
                           value={sourceText}
                           onChange={(e) => handleSourceTextChange(e.target.value)}
@@ -553,15 +549,15 @@ export default function Home() {
                 <div className="flex-1">
                   <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider block mb-1">Destination</span>
                   <div className="relative mt-2">
-                    <input 
-                      className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
-                      type="text" 
+                    <input
+                      className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      type="text"
                       placeholder="Type destination..."
                       value={destinationText}
                       onChange={(e) => handleDestinationTextChange(e.target.value)}
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
-                    
+
                     {destinationSuggestions.length > 0 && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
                         {destinationSuggestions.map((name) => (
@@ -576,7 +572,7 @@ export default function Home() {
                         ))}
                       </div>
                     )}
-                    
+
                     {resolvedDestination && (
                       <div className="mt-1.5 flex items-center gap-1 text-[10px] text-error font-bold">
                         <span className="material-symbols-outlined text-[12px]">check_circle</span>
@@ -592,7 +588,7 @@ export default function Home() {
               <div className="flex justify-between items-center">
                 <h3 className="font-label-caps text-on-surface-variant uppercase tracking-wider text-[11px] font-bold">Suggested Routes</h3>
                 {routeInfo && (
-                  <button 
+                  <button
                     onClick={() => setShowDirectionsList(!showDirectionsList)}
                     className="text-[11px] text-primary font-black hover:underline active-interaction flex items-center gap-1"
                   >
@@ -603,7 +599,7 @@ export default function Home() {
                   </button>
                 )}
               </div>
-              
+
               {!routeInfo ? (
                 <div className="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-6 text-center text-on-surface-variant font-medium text-xs">
                   <span className="material-symbols-outlined text-[32px] animate-spin text-primary block mb-2">sync</span>
@@ -612,13 +608,12 @@ export default function Home() {
               ) : (
                 <>
                   {routeInfo.safest && (
-                    <div 
+                    <div
                       onClick={() => setSelectedRoute('safest')}
-                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                        selectedRoute === 'safest' 
-                          ? 'bg-primary/5 border-primary shadow-sm' 
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${selectedRoute === 'safest'
+                          ? 'bg-primary/5 border-primary shadow-sm'
                           : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -634,7 +629,7 @@ export default function Home() {
                           {routeInfo.safest.safety}
                         </div>
                       </div>
-                      
+
                       {selectedRoute === 'safest' && (
                         <div className="mt-3.5 pt-3.5 border-t border-primary/10 grid grid-cols-3 gap-1.5">
                           <div className="text-center">
@@ -655,13 +650,12 @@ export default function Home() {
                   )}
 
                   {routeInfo.balanced && (
-                    <div 
+                    <div
                       onClick={() => setSelectedRoute('balanced')}
-                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                        selectedRoute === 'balanced' 
-                          ? 'bg-amber-500/5 border-amber-500 shadow-sm' 
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${selectedRoute === 'balanced'
+                          ? 'bg-amber-500/5 border-amber-500 shadow-sm'
                           : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-center">
                         <div>
@@ -681,13 +675,12 @@ export default function Home() {
                   )}
 
                   {routeInfo.fastest && (
-                    <div 
+                    <div
                       onClick={() => setSelectedRoute('fastest')}
-                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${
-                        selectedRoute === 'fastest' 
-                          ? 'bg-error/5 border-error shadow-sm' 
+                      className={`rounded-2xl p-4 cursor-pointer transition-all border-2 active-interaction ${selectedRoute === 'fastest'
+                          ? 'bg-error/5 border-error shadow-sm'
                           : 'bg-surface-container-low border-transparent hover:bg-surface-container hover:border-outline-variant/30'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -720,7 +713,7 @@ export default function Home() {
                 <span className="text-[10px] text-on-surface-variant uppercase font-black tracking-wider block mb-1">
                   Turn-by-turn directions ({selectedRoute})
                 </span>
-                
+
                 {directions.map((step, idx) => (
                   <div key={idx} className="flex gap-3 items-start text-xs border-b border-outline-variant/10 pb-2.5 last:border-0 last:pb-0">
                     <span className="material-symbols-outlined text-primary text-[18px] mt-0.5">
@@ -751,8 +744,8 @@ export default function Home() {
         </aside>
 
         <section className="flex-1 relative md:ml-[400px] h-[calc(100vh-64px)] z-0 bg-surface-container-high">
-          <Map 
-            selectedRoute={selectedRoute} 
+          <Map
+            selectedRoute={selectedRoute}
             userLocation={userLocation}
             navigationPosition={simulatedCoords}
             navigationActive={navigationActive}
@@ -763,13 +756,12 @@ export default function Home() {
             <button className="bg-white/90 backdrop-blur-md shadow-lg border border-outline-variant/15 w-11 h-11 rounded-2xl flex items-center justify-center text-on-surface hover:bg-white transition-all active-interaction">
               <span className="material-symbols-outlined text-[20px]">layers</span>
             </button>
-            <button 
+            <button
               onClick={requestLocationPermission}
-              className={`shadow-lg border w-11 h-11 rounded-2xl flex items-center justify-center transition-all active-interaction ${
-                locationPermission === 'granted' 
-                  ? 'bg-primary border-primary text-white' 
+              className={`shadow-lg border w-11 h-11 rounded-2xl flex items-center justify-center transition-all active-interaction ${locationPermission === 'granted'
+                  ? 'bg-primary border-primary text-white'
                   : 'bg-white/90 border-outline-variant/15 text-on-surface hover:bg-white'
-              }`}
+                }`}
             >
               <span className="material-symbols-outlined text-[20px]">my_location</span>
             </button>
@@ -798,8 +790,8 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={handleStartNavigation}
                   className="w-full sm:w-auto bg-primary hover:bg-primary/95 text-white h-12 px-6 rounded-full font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/15 active-interaction transition-all shrink-0"
                 >
@@ -833,10 +825,10 @@ export default function Home() {
                     <span>Active Route: {selectedRoute} ({transitMode})</span>
                     <span>Step {navigationStep + 1} of {directions.length}</span>
                   </div>
-                  
+
                   <div className="w-full h-2 bg-white/25 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-white transition-all duration-1000" 
+                    <div
+                      className="h-full bg-white transition-all duration-1000"
                       style={{ width: `${((navigationStep + 1) / directions.length) * 100}%` }}
                     />
                   </div>
@@ -857,7 +849,7 @@ export default function Home() {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button 
+                  <button
                     onClick={() => {
                       setNavigationActive(false);
                       setSimulatedCoords(null);
@@ -869,7 +861,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-[16px]">pause</span>
                     Pause Trip
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       setNavigationActive(false);
                       setSimulatedCoords(null);
@@ -904,7 +896,7 @@ export default function Home() {
                   Alerting police dispatch and your emergency contacts with your live location.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={cancelSOS}
                 className="bg-white text-error hover:bg-white/95 px-8 py-3.5 rounded-full font-bold shadow-2xl active-interaction text-sm uppercase tracking-wider"
               >

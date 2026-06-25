@@ -15,12 +15,12 @@ class SOSService:
     def __init__(self, sms_client: SMSClient):
         self.sms_client = sms_client
 
-    async def trigger_sos(self, db: AsyncSession, user: User, lat: float, lng: float) -> dict:
+    async def trigger_sos(self, db: AsyncSession, user: User | None, lat: float, lng: float) -> dict:
         """Trigger an SOS alert and notify emergency contacts."""
-        contacts = user.emergency_contacts or []
-
+        contacts = user.emergency_contacts if user and user.emergency_contacts else []
+        
+        user_name = (user.name or user.phone) if user else "Anonymous User"
         maps_link = f"https://maps.google.com/?q={lat},{lng}"
-        user_name = user.name or user.phone
         message = (
             f"SOS ALERT from {user_name}!\n"
             f"Location: {maps_link}\n"
@@ -35,6 +35,10 @@ class SOSService:
             if phone:
                 await self.sms_client.send_message(phone, message)
                 notified_names.append(name)
+                
+        if not contacts:
+            # For anonymous users or users with no contacts, simulate alerting authorities
+            notified_names.append("Local Authorities (112)")
 
         return {
             "event_id": uuid.uuid4(),

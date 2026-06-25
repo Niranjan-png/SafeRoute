@@ -56,7 +56,7 @@ export async function postReport(reportType, description, lat, lng) {
       body: JSON.stringify({
         lat,
         lng,
-        report_type: reportType.toLowerCase().replace(' ', '_'),
+        report_type: reportType.toLowerCase().replaceAll(' ', '_'),
         description
       }),
     });

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import json
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db, get_current_user, get_optional_current_user
 from app.models.user import User
 from app.schemas.report import ReportCreateRequest, ReportResponse, ReportListResponse
 from app.models.safety_report import SafetyReport
@@ -18,22 +18,16 @@ router = APIRouter()
 @router.post("/create", response_model=ReportResponse)
 async def create_report(
     request: ReportCreateRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     report = SafetyReport(
-        user_id=current_user.user_id,
+        user_id=current_user.user_id if current_user else None,
         report_type=request.report_type,
         description=request.description,
+        geom=f"SRID=4326;POINT({request.lng} {request.lat})",
     )
     db.add(report)
-    await db.flush()
-    await db.execute(
-        text(
-            "UPDATE safety_reports SET geom = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) WHERE report_id = :id"
-        ),
-        {"lng": request.lng, "lat": request.lat, "id": report.report_id},
-    )
     await db.commit()
 
     return ReportResponse(

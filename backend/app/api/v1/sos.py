@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth.sms_client import get_sms_client
 from app.core.sos.sos_service import SOSService
-from app.dependencies import get_current_user, get_db
+from app.dependencies import get_current_user, get_optional_current_user, get_db
 from app.schemas.sos import SOSTriggerRequest, SOSTriggerResponse
 
 router = APIRouter(prefix="/sos", tags=["SOS"])
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/sos", tags=["SOS"])
 async def trigger_sos(
     request: SOSTriggerRequest,
     db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(get_optional_current_user),
 ):
     sms_client = get_sms_client()
     sos_service = SOSService(sms_client)

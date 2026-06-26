@@ -23,7 +23,7 @@
         <br />
         <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
         <br />
-        <img src="https://img.shields.io/badge/Leaflet-199900?style=flat-square&logo=leaflet&logoColor=white" alt="Leaflet JS" />
+        <img src="https://img.shields.io/badge/MapLibre_GL_JS-427BF5?style=flat-square&logo=maplibre&logoColor=white" alt="MapLibre GL JS" />
       </td>
       <td>
         <img src="https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
@@ -86,10 +86,10 @@
 ## ✨ Key Features
 
 *   **🛡️ Multi-Weighted Safety Routing**: Compute Safest, Balanced, and Fastest paths dynamically.
-*   **📍 Live Turn-by-Turn GPS Navigation**: An interactive navigation HUD resembling premium interfaces, offering real-time distance counters, progress tracking, and direction changes (e.g., *"Turn left onto Residency Road"*).
-*   **🔥 Live Safety Heatmap**: Highlights safe (green) and unsafe (red) zones based on real-time crowdsourced reports and city-wide data.
+*   **📍 3D Live Turn-by-Turn Navigation**: An interactive 3D navigation HUD using MapLibre GL JS, featuring an angled 60° pitch, automatic camera following, smooth bearing rotation, and direction tracking.
+*   **🔥 Live Safety Heatmap & Infrastructure Layers**: Highlights safe (green) and unsafe (red) zones based on real crime density data. Includes interactive, toggleable map layers for 200+ real safety infrastructure points (Police Stations, CCTV clusters, Hospitals, Metro Stations, Streetlights, and Pink Booths).
 *   **🚨 Automatic SOS Alerts & Contacts**: Features a 3-second abort-countdown trigger to send simulated SMS alerts with live coordinates to trusted emergency contacts.
-*   **📢 Community Safety Feed**: Crowdsource localized alerts (broken streetlights, construction hazards, suspicious groups) with community verification checks.
+*   **📢 Community Safety Feed**: Crowdsource localized alerts (broken streetlights, construction hazards) and manage reports dynamically.
 *   **📡 Real-Time Danger Alerts (WebSocket)**: Sends instantaneous push alerts to the mobile or web app if a user enters a segment with a safety score below `50`.
 
 ---
@@ -101,7 +101,7 @@
 *   **FastAPI**: A high-performance, asynchronous Python web framework for serving safety routes and managing WebSockets.
 
 ### Geospatial & Spatial Math Libraries
-*   **Leaflet.js**: Enables client-side interactive map renders, polyline styling, and custom safety overlay layers.
+*   **MapLibre GL JS (react-map-gl)**: Enables client-side hardware-accelerated 3D maps, smooth camera transitions, and complex GeoJSON layer rendering.
 *   **NetworkX**: Used on the backend to construct and query the directed routing graph.
 *   **OSMnx**: Scrapes and models OpenStreetMap road networks.
 *   **SciPy (cKDTree)**: Performs extremely fast 2D spatial queries to snap raw GPS coordinates to the nearest graph node.
@@ -123,7 +123,7 @@
 
 ```mermaid
 graph TD
-    User([User Client: React/Next.js/Leaflet]) <--> |REST HTTP / JSON| API[FastAPI Server]
+    User([User Client: React/Next.js/MapLibre]) <--> |REST HTTP / JSON| API[FastAPI Server]
     User <--> |WebSockets| WS[Live WS Alert Manager]
     API --> |Queries / Spatial Math| DB[(PostgreSQL + PostGIS)]
     API --> |Queues Graph Rebuild| Celery[Celery Worker]
@@ -151,10 +151,10 @@ SafeRoute/
 │   ├── tests/                # Pytest unit & integration test suites
 │   ├── pyproject.toml        # Poetry package configuration
 │   └── Dockerfile            # Container build spec
-├── frontend/                 # Next.js 16 Client App (React 19, Tailwind v4, Leaflet)
+├── frontend/                 # Next.js 16 Client App (React 19, Tailwind v4, MapLibre)
 │   ├── src/
 │   │   ├── app/              # App router (Main map, Safety Feed, Settings)
-│   │   ├── components/       # Custom React widgets (Leaflet Map, HUD, SOS slider)
+│   │   ├── components/       # Custom React widgets (MapLibre Map, HUD, SOS slider)
 │   │   └── utils/            # Core utilities (API client, navigation math)
 │   ├── public/               # Static icons & UI graphics
 │   └── package.json          # Node.js configurations
@@ -341,6 +341,13 @@ Returns a GeoJSON list containing `safest`, `balanced`, and `fastest` routes wit
       "safety_score": 42
     }
     ```
+
+---
+
+### 🛡️ Community Reports Endpoint
+`DELETE /api/v1/report/{report_id}`
+
+**Action**: Remove a community safety report dynamically. Requires authentication and authorization (must be the report author or an admin).
 
 ---
 

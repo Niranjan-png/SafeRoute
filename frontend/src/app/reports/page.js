@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchNearbyReports, postReport, triggerSOSEmergency } from '../../utils/api';
+import { fetchNearbyReports, postReport, triggerSOSEmergency, deleteReport } from '../../utils/api';
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -83,6 +83,20 @@ export default function Reports() {
       setReports(prev => [newReport, ...prev]);
       setShowAddModal(false);
       setDescription('');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      if (!isSampleData && !String(id).startsWith('s')) {
+        await deleteReport(id);
+      }
+      setReports(prev => prev.filter(report => (report.report_id || report.id) !== id));
+      setToast('Report deleted successfully');
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      setToast('Failed to delete report');
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
@@ -222,7 +236,16 @@ export default function Reports() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-lg font-bold">{report.time}</span>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-[10px] text-on-surface-variant bg-surface-container px-2 py-1 rounded-lg font-bold">{report.time}</span>
+                      <button 
+                        onClick={() => handleDelete(report.report_id || report.id)}
+                        className="text-on-surface-variant/50 hover:text-error hover:bg-error/10 p-1.5 rounded-full transition-all flex items-center justify-center"
+                        title="Delete Report"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-4 mb-4">

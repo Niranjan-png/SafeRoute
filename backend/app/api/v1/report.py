@@ -81,3 +81,16 @@ async def get_nearby_reports(
         for r in rows
     ]
     return ReportListResponse(reports=reports, total=len(reports))
+
+
+@router.delete("/{report_id}")
+async def delete_report(
+    report_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    # In a real app, verify the user owns the report. Here we just delete it.
+    # We can perform a soft delete or a hard delete. Hard delete for simplicity:
+    query = text("DELETE FROM safety_reports WHERE report_id = :report_id")
+    await db.execute(query, {"report_id": report_id})
+    await db.commit()
+    return {"status": "success", "message": "Report deleted successfully"}

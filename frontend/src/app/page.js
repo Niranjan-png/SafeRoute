@@ -20,6 +20,21 @@ export default function Home() {
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [toast, setToast] = useState(null);
   const [showDirectionsList, setShowDirectionsList] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
+  const [visibleLayers, setVisibleLayers] = useState({
+    police: false,
+    cctv: false,
+    hospitals: false,
+    metro: false,
+    streetlights: false,
+    busStands: false,
+    womenSafety: false,
+  });
+
+  const toggleLayer = (key) => {
+    setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Source location mode: 'gps' or 'manual'
   const [sourceMode, setSourceMode] = useState('gps');
@@ -766,10 +781,20 @@ export default function Home() {
             navigationActive={navigationActive}
             currentBearing={currentBearing}
             path={currentCoords}
+            showHeatmap={showHeatmap}
+            visibleLayers={visibleLayers}
           />
 
           <div className="absolute top-4 right-4 flex flex-col gap-2.5 z-10">
-            <button className="bg-white/90 backdrop-blur-md shadow-lg border border-outline-variant/15 w-11 h-11 rounded-2xl flex items-center justify-center text-on-surface hover:bg-white transition-all active-interaction">
+            <button 
+              onClick={() => setShowLayersPanel(!showLayersPanel)}
+              className={`backdrop-blur-md shadow-lg border w-11 h-11 rounded-2xl flex items-center justify-center transition-all active-interaction ${
+                showLayersPanel || Object.values(visibleLayers).some(v => v) || showHeatmap
+                  ? 'bg-primary border-primary text-white' 
+                  : 'bg-white/90 border-outline-variant/15 text-on-surface hover:bg-white'
+              }`}
+              title="Toggle Map Layers"
+            >
               <span className="material-symbols-outlined text-[20px]">layers</span>
             </button>
             <button
@@ -782,6 +807,78 @@ export default function Home() {
               <span className="material-symbols-outlined text-[20px]">my_location</span>
             </button>
           </div>
+
+          {/* Layers Control Panel */}
+          {showLayersPanel && (
+            <div className="absolute top-[120px] right-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-outline-variant/15 p-3 w-52 max-h-[320px] overflow-y-auto slide-up-centered">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[12px] font-bold text-on-surface">Map Layers</span>
+                <button onClick={() => setShowLayersPanel(false)} className="text-on-surface-variant hover:text-error transition-all">
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+              <div className="space-y-1.5">
+                {[
+                  { key: 'heatmap', label: 'Crime Heatmap', icon: 'local_fire_department', color: '#D32F2F' },
+                  { key: 'police', label: 'Police Stations', icon: 'local_police', color: '#1565C0' },
+                  { key: 'cctv', label: 'CCTV Cameras', icon: 'videocam', color: '#7B1FA2' },
+                  { key: 'hospitals', label: 'Hospitals', icon: 'local_hospital', color: '#D32F2F' },
+                  { key: 'metro', label: 'Metro Stations', icon: 'train', color: '#2E7D32' },
+                  { key: 'streetlights', label: 'Streetlights', icon: 'lightbulb', color: '#FFA000' },
+                  { key: 'busStands', label: 'Bus Stands', icon: 'directions_bus', color: '#00838F' },
+                  { key: 'womenSafety', label: 'Women Safety', icon: 'female', color: '#E91E63' },
+                ].map(layer => {
+                  const isActive = layer.key === 'heatmap' ? showHeatmap : visibleLayers[layer.key];
+                  return (
+                    <button
+                      key={layer.key}
+                      onClick={() => layer.key === 'heatmap' ? setShowHeatmap(!showHeatmap) : toggleLayer(layer.key)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all ${
+                        isActive
+                          ? 'bg-surface-container-low text-on-surface'
+                          : 'text-on-surface-variant hover:bg-surface-container-low/50'
+                      }`}
+                    >
+                      <span 
+                        className="material-symbols-outlined text-[16px]" 
+                        style={{ color: isActive ? layer.color : '#9E9E9E', fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0" }}
+                      >{layer.icon}</span>
+                      <span className="flex-1 text-left">{layer.label}</span>
+                      <div className={`w-7 h-4 rounded-full transition-all flex items-center ${isActive ? 'justify-end' : 'justify-start'}`} style={{ backgroundColor: isActive ? layer.color : '#E0E0E0' }}>
+                        <div className="w-3 h-3 rounded-full bg-white shadow-sm mx-0.5"></div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[8px] text-on-surface-variant mt-3 font-medium border-t border-outline-variant/10 pt-2">Data: NCRB, BBMP, BMRCL, KSP</p>
+            </div>
+          )}
+
+          {/* Heatmap Legend */}
+          {showHeatmap && (
+            <div className="absolute bottom-28 left-4 md:left-[416px] z-10 bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-outline-variant/15 p-3 slide-up-centered">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-error text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
+                  <span className="text-[11px] font-bold text-on-surface">Crime Density</span>
+                </div>
+                <button 
+                  onClick={() => setShowHeatmap(false)}
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-all"
+                  title="Hide Heatmap"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] text-on-surface-variant font-semibold">Low</span>
+                <div className="w-28 h-2.5 rounded-full" style={{ background: 'linear-gradient(to right, rgba(15,165,138,0.4), rgba(255,235,59,0.7), rgba(255,152,0,0.8), rgba(244,67,54,0.9), rgba(183,28,28,1))' }}></div>
+                <span className="text-[9px] text-on-surface-variant font-semibold">High</span>
+              </div>
+              <p className="text-[8px] text-on-surface-variant mt-1.5 font-medium">Source: NCRB & Bengaluru Police Data</p>
+            </div>
+          )}
 
           {!navigationActive ? (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-[540px] glass-card rounded-3xl p-5 z-20 border border-white/60 shadow-2xl slide-up-centered">

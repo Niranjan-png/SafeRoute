@@ -20,7 +20,7 @@ const DynamicMap = dynamic(() => import('./DynamicMap'), {
   )
 });
 
-export default function Map({ selectedRoute, userLocation, navigationPosition, navigationActive, currentBearing, path }) {
+export default function Map({ selectedRoute, userLocation, navigationPosition, navigationActive, currentBearing, path, showHeatmap, visibleLayers }) {
   return (
     <DynamicMap 
       selectedRoute={selectedRoute} 
@@ -29,6 +29,8 @@ export default function Map({ selectedRoute, userLocation, navigationPosition, n
       navigationActive={navigationActive} 
       currentBearing={currentBearing}
       path={path}
+      showHeatmap={showHeatmap}
+      visibleLayers={visibleLayers}
     />
   );
 }

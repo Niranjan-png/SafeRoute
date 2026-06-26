@@ -298,3 +298,18 @@ input:checked + .slider:before { transform: translateX(20px); }
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(0, 107, 89, 0.4);
 }
+
+/* Infrastructure map markers */
+.infra-marker,
+.streetlight-marker {
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+
+.infra-marker:hover,
+.streetlight-marker:hover {
+  transform: scale(1.25);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+  z-index: 10;
+}

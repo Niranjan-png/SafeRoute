@@ -67,3 +67,19 @@ export async function postReport(reportType, description, lat, lng) {
     throw error;
   }
 }
+
+export async function deleteReport(reportId) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/report/${reportId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      },
+    });
+    if (!res.ok) throw new Error('Failed to delete report');
+    return await res.json();
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    throw error;
+  }
+}

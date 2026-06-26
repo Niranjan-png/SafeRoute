@@ -94,6 +94,33 @@ export default function DynamicMap({
         style={{ width: '100%', height: '100%' }}
         attributionControl={false}
       >
+        {/* 3D Buildings */}
+        <Layer
+          id="3d-buildings"
+          source="carto"
+          source-layer="building"
+          type="fill-extrusion"
+          minzoom={15}
+          paint={{
+            'fill-extrusion-color': '#e2e8f0',
+            'fill-extrusion-height': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              15, 0,
+              15.05, ['coalesce', ['get', 'render_height'], ['get', 'height'], 20]
+            ],
+            'fill-extrusion-base': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              15, 0,
+              15.05, ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0]
+            ],
+            'fill-extrusion-opacity': 0.8
+          }}
+        />
+
         {/* Crime Safety Heatmap Layer */}
         {showHeatmap && (
           <Source id="crime-heatmap" type="geojson" data={crimeHeatmapGeoJSON}>
@@ -150,8 +177,8 @@ export default function DynamicMap({
         {visibleLayers.police && POLICE_STATIONS.map((s, i) => (
           <Marker key={`police-${i}`} longitude={s.coords[0]} latitude={s.coords[1]} anchor="center">
             <div className="infra-marker" title={s.name}>
-              <div style={{ background: '#1565C0' }} className="w-5 h-5 rounded flex items-center justify-center shadow-sm border border-white/80">
-                <span className="material-symbols-outlined text-white text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_police</span>
+              <div style={{ background: '#1565C0' }} className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shadow-sm border-[0.5px] border-white/80">
+                <span className="material-symbols-outlined text-white text-[9px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_police</span>
               </div>
             </div>
           </Marker>
@@ -161,8 +188,8 @@ export default function DynamicMap({
         {visibleLayers.cctv && CCTV_CAMERAS.map((c, i) => (
           <Marker key={`cctv-${i}`} longitude={c.coords[0]} latitude={c.coords[1]} anchor="center">
             <div className="infra-marker" title={`${c.area} (${c.count} cameras)`}>
-              <div style={{ background: '#6A1B9A' }} className="w-5 h-5 rounded flex items-center justify-center shadow-sm border border-white/80">
-                <span className="material-symbols-outlined text-white text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>videocam</span>
+              <div style={{ background: '#E0F2F1' }} className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shadow-sm border border-teal-500/30">
+                <span className="material-symbols-outlined text-teal-900 text-[9px]" style={{ fontVariationSettings: "'FILL' 1" }}>videocam</span>
               </div>
             </div>
           </Marker>
@@ -172,8 +199,8 @@ export default function DynamicMap({
         {visibleLayers.hospitals && HOSPITALS.map((h, i) => (
           <Marker key={`hosp-${i}`} longitude={h.coords[0]} latitude={h.coords[1]} anchor="center">
             <div className="infra-marker" title={h.name}>
-              <div style={{ background: '#C62828' }} className="w-5 h-5 rounded flex items-center justify-center shadow-sm border border-white/80">
-                <span className="material-symbols-outlined text-white text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_hospital</span>
+              <div style={{ background: '#C62828' }} className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shadow-sm border-[0.5px] border-white/80">
+                <span className="material-symbols-outlined text-white text-[9px]" style={{ fontVariationSettings: "'FILL' 1" }}>local_hospital</span>
               </div>
             </div>
           </Marker>
@@ -185,8 +212,8 @@ export default function DynamicMap({
           return (
             <Marker key={`metro-${i}`} longitude={m.coords[0]} latitude={m.coords[1]} anchor="center">
               <div className="infra-marker" title={m.name}>
-                <div style={{ background: bg }} className="w-[18px] h-[18px] rounded flex items-center justify-center shadow-sm border border-white/80">
-                  <span className="material-symbols-outlined text-white text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>train</span>
+                <div style={{ background: bg }} className="w-3 h-3 rounded-sm flex items-center justify-center shadow-sm border-[0.5px] border-white/80">
+                  <span className="material-symbols-outlined text-white text-[8px]" style={{ fontVariationSettings: "'FILL' 1" }}>train</span>
                 </div>
               </div>
             </Marker>
@@ -198,7 +225,7 @@ export default function DynamicMap({
           const glowColor = s.status === 'good' ? 'rgba(255,235,59,0.25)' : s.status === 'moderate' ? 'rgba(255,183,77,0.20)' : 'rgba(0,0,0,0)';
           const borderColor = s.status === 'good' ? 'rgba(255,235,59,0.5)' : s.status === 'moderate' ? 'rgba(255,183,77,0.4)' : 'rgba(211,47,47,0.3)';
           const dotColor = s.status === 'good' ? '#F9A825' : s.status === 'moderate' ? '#FF8F00' : '#C62828';
-          const glowSize = s.status === 'poor' ? 30 : Math.max(35, Math.min(60, s.coverage * 0.6));
+          const glowSize = s.status === 'poor' ? 20 : Math.max(25, Math.min(45, s.coverage * 0.45));
           return (
             <Marker key={`light-${i}`} longitude={s.coords[0]} latitude={s.coords[1]} anchor="center">
               <div className="streetlight-marker" title={`${s.area} — ${s.coverage}% coverage`}>
@@ -212,8 +239,8 @@ export default function DynamicMap({
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <div style={{ background: dotColor }} className="w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white/60">
-                    <span className="material-symbols-outlined text-white text-[8px]" style={{ fontVariationSettings: "'FILL' 1" }}>{s.status === 'poor' ? 'light_off' : 'lightbulb'}</span>
+                  <div style={{ background: dotColor }} className="w-2.5 h-2.5 rounded-full flex items-center justify-center border-[0.5px] border-white/60">
+                    <span className="material-symbols-outlined text-white text-[6px]" style={{ fontVariationSettings: "'FILL' 1" }}>{s.status === 'poor' ? 'light_off' : 'lightbulb'}</span>
                   </div>
                 </div>
               </div>
@@ -225,8 +252,8 @@ export default function DynamicMap({
         {visibleLayers.busStands && BUS_STANDS.map((b, i) => (
           <Marker key={`bus-${i}`} longitude={b.coords[0]} latitude={b.coords[1]} anchor="center">
             <div className="infra-marker" title={b.name}>
-              <div style={{ background: '#00695C' }} className="w-5 h-5 rounded flex items-center justify-center shadow-sm border border-white/80">
-                <span className="material-symbols-outlined text-white text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>directions_bus</span>
+              <div style={{ background: '#00695C' }} className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shadow-sm border-[0.5px] border-white/80">
+                <span className="material-symbols-outlined text-white text-[9px]" style={{ fontVariationSettings: "'FILL' 1" }}>directions_bus</span>
               </div>
             </div>
           </Marker>
@@ -236,8 +263,8 @@ export default function DynamicMap({
         {visibleLayers.womenSafety && WOMEN_SAFETY_POINTS.map((w, i) => (
           <Marker key={`ws-${i}`} longitude={w.coords[0]} latitude={w.coords[1]} anchor="center">
             <div className="infra-marker" title={w.name}>
-              <div style={{ background: '#AD1457' }} className="w-5 h-5 rounded flex items-center justify-center shadow-sm border border-white/80">
-                <span className="material-symbols-outlined text-white text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>{w.type === 'she_team' ? 'shield' : w.type === 'pink_booth' ? 'support_agent' : 'help'}</span>
+              <div style={{ background: '#AD1457' }} className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shadow-sm border-[0.5px] border-white/80">
+                <span className="material-symbols-outlined text-white text-[9px]" style={{ fontVariationSettings: "'FILL' 1" }}>{w.type === 'she_team' ? 'shield' : w.type === 'pink_booth' ? 'support_agent' : 'help'}</span>
               </div>
             </div>
           </Marker>

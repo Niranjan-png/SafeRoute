@@ -50,79 +50,26 @@ export const POLICE_STATIONS = [
 // These represent major cluster locations
 // ──────────────────────────────────────────────
 export const CCTV_CAMERAS = [
-  // MG Road / Brigade Road Corridor - Dense coverage
-  { coords: [77.6068, 12.9756], count: 24, area: 'MG Road' },
-  { coords: [77.6070, 12.9730], count: 18, area: 'Brigade Road' },
-  { coords: [77.6060, 12.9750], count: 12, area: 'Church Street' },
-  
-  // Majestic / Railway Station - Highest density
-  { coords: [77.5946, 12.9716], count: 42, area: 'Majestic Bus Stand' },
-  { coords: [77.5930, 12.9720], count: 28, area: 'KSR Railway Station' },
-  { coords: [77.5960, 12.9700], count: 16, area: 'Majestic Metro' },
-  
-  // Indiranagar
-  { coords: [77.6408, 12.9784], count: 14, area: '100 Feet Road' },
-  { coords: [77.6395, 12.9790], count: 10, area: '12th Main' },
-  { coords: [77.6380, 12.9775], count: 8, area: 'CMH Road' },
-  
-  // Koramangala
-  { coords: [77.6245, 12.9352], count: 12, area: '80 Feet Road' },
-  { coords: [77.6260, 12.9340], count: 8, area: 'Forum Mall Area' },
-  { coords: [77.6220, 12.9365], count: 6, area: 'Sony Signal' },
-  
-  // Commercial Street / Shivajinagar
-  { coords: [77.6065, 12.9810], count: 20, area: 'Commercial Street' },
-  { coords: [77.6055, 12.9820], count: 14, area: 'Shivajinagar Bus Stand' },
-  
-  // Whitefield
-  { coords: [77.7500, 12.9698], count: 16, area: 'ITPL Main Road' },
-  { coords: [77.7480, 12.9710], count: 10, area: 'Whitefield Metro' },
-  
-  // Electronic City
-  { coords: [77.6600, 12.8440], count: 18, area: 'EC Phase 1' },
-  { coords: [77.6620, 12.8460], count: 12, area: 'EC Phase 2' },
-  
-  // Silk Board
-  { coords: [77.6227, 12.9177], count: 16, area: 'Silk Board Junction' },
-  
-  // KR Market
-  { coords: [77.5775, 12.9630], count: 22, area: 'KR Market' },
-  { coords: [77.5785, 12.9640], count: 14, area: 'Chickpete' },
-  
-  // Hebbal
-  { coords: [77.5950, 13.0358], count: 12, area: 'Hebbal Flyover' },
-  { coords: [77.5935, 13.0370], count: 8, area: 'Hebbal Lake' },
-  
-  // Marathahalli
-  { coords: [77.6985, 12.9565], count: 10, area: 'Marathahalli Bridge' },
-  { coords: [77.7000, 12.9575], count: 8, area: 'ORR Marathahalli' },
-  
-  // Jayanagar
-  { coords: [77.5838, 12.9250], count: 10, area: 'Jayanagar 4th Block' },
-  { coords: [77.5850, 12.9260], count: 8, area: 'Jayanagar Shopping Complex' },
-  
-  // BTM Layout
-  { coords: [77.6120, 12.9160], count: 8, area: 'Silk Board - BTM' },
-  { coords: [77.6105, 12.9150], count: 6, area: 'BTM 2nd Stage' },
-  
-  // HSR Layout
-  { coords: [77.6389, 12.9116], count: 8, area: 'HSR BDA Complex' },
-  { coords: [77.6400, 12.9130], count: 6, area: 'Agara Lake' },
-  
-  // Cubbon Park / Vidhana Soudha
-  { coords: [77.5929, 12.9763], count: 30, area: 'Vidhana Soudha' },
-  { coords: [77.5900, 12.9780], count: 16, area: 'High Court' },
-  
-  // Lalbagh
-  { coords: [77.5848, 12.9507], count: 12, area: 'Lalbagh Main Gate' },
-  { coords: [77.5860, 12.9520], count: 8, area: 'Lalbagh West Gate' },
-  
-  // Banashankari
-  { coords: [77.5650, 12.9200], count: 10, area: 'Banashankari Circle' },
-  
-  // KR Puram
-  { coords: [77.6870, 12.9990], count: 10, area: 'Tin Factory' },
-  { coords: [77.6855, 13.0000], count: 8, area: 'KR Puram Railway' },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.584168, 12.9779004] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6355011, 12.9670078] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.636018, 12.9699507] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.5349283, 12.9655057] },
+  { area: 'CCTV', count: 1, coords: [77.5348464, 12.9651401] },
+  { area: 'Surveillance camera', count: 1, coords: [77.5342179, 12.9578343] },
+  { area: 'Pole 5', count: 1, coords: [77.6138022, 12.9737679] },
+  { area: 'Pole 4', count: 1, coords: [77.6110349, 12.9743705] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6123667, 12.9344914] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.5952023, 12.9102739] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6233088, 12.9311267] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6230211, 12.9308146] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6232746, 12.9995879] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.623085, 12.9996458] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6230575, 12.9996571] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6104064, 12.9991284] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.6073388, 12.9935113] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.5994986, 12.9905635] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.597122, 12.9843792] },
+  { area: 'OSM Verified Camera', count: 1, coords: [77.596906, 12.9803297] },
 ];
 
 // ──────────────────────────────────────────────

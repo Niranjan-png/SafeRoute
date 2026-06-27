@@ -15,7 +15,7 @@ export async function fetchRoutes(source, destination) {
   }
 }
 
-export async function triggerSOSEmergency(lat, lng) {
+export async function triggerSOSEmergency(lat, lng, contacts = null, message = null) {
   try {
     const res = await fetch(`${API_BASE_URL}/sos/trigger`, {
       method: 'POST',
@@ -23,7 +23,7 @@ export async function triggerSOSEmergency(lat, lng) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
       },
-      body: JSON.stringify({ lat, lng }),
+      body: JSON.stringify({ lat, lng, contacts, message }),
     });
     if (!res.ok) throw new Error('SOS trigger failed');
     return await res.json();

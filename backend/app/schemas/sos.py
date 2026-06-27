@@ -10,6 +10,8 @@ class SOSTriggerRequest(BaseModel):
     """Request body for triggering an SOS alert."""
     lat: float = Field(..., ge=-90, le=90, description="Current latitude")
     lng: float = Field(..., ge=-180, le=180, description="Current longitude")
+    contacts: list[dict] | None = Field(default=None, description="Optional list of contacts to notify directly from client")
+    message: str | None = Field(default=None, description="Optional custom alert message to append to the SMS")
 
 
 class SOSTriggerResponse(BaseModel):

@@ -36,6 +36,8 @@ async def trigger_sos(
             user=user,
             lat=request.lat,
             lng=request.lng,
+            contacts_override=request.contacts,
+            custom_message=request.message,
         )
         await db.commit()
         return SOSTriggerResponse(**result)

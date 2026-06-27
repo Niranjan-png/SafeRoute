@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Map from '../components/Map/Map';
+import Logo from '../components/Logo';
 import { fetchRoutes, triggerSOSEmergency } from '../utils/api';
 import { getDistance, getBearing } from '../utils/navigation';
 import { fetchOSRMRoutes, getStepIcon } from '../utils/osrm';
@@ -31,6 +32,8 @@ export default function Home() {
     busStands: false,
     womenSafety: false,
   });
+
+  const [showMethodology, setShowMethodology] = useState(false);
 
   const toggleLayer = (key) => {
     setVisibleLayers(prev => ({ ...prev, [key]: !prev[key] }));
@@ -82,6 +85,23 @@ export default function Home() {
     setSourceSuggestions([]);
   };
 
+  const performSourceSearch = () => {
+    if (sourceSuggestions.length > 0) {
+      selectSourceSuggestion(sourceSuggestions[0]);
+    } else {
+      const query = sourceText.toLowerCase().trim();
+      const bestMatch = Object.keys(BENGALURU_LANDMARKS).find(name =>
+        name.toLowerCase() === query || name.toLowerCase().includes(query)
+      );
+      if (bestMatch) {
+        selectSourceSuggestion(bestMatch);
+      } else {
+        setToast(`Location "${sourceText}" not found. Try BMS College, Koramangala, etc.`);
+        setTimeout(() => setToast(null), 3000);
+      }
+    }
+  };
+
   // Destination state
   const [destinationText, setDestinationText] = useState('Indiranagar Metro Station');
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
@@ -106,6 +126,23 @@ export default function Home() {
     setDestinationSuggestions([]);
   };
 
+  const performDestinationSearch = () => {
+    if (destinationSuggestions.length > 0) {
+      selectDestinationSuggestion(destinationSuggestions[0]);
+    } else {
+      const query = destinationText.toLowerCase().trim();
+      const bestMatch = Object.keys(BENGALURU_LANDMARKS).find(name =>
+        name.toLowerCase() === query || name.toLowerCase().includes(query)
+      );
+      if (bestMatch) {
+        selectDestinationSuggestion(bestMatch);
+      } else {
+        setToast(`Destination "${destinationText}" not found. Try Indiranagar, MG Road, etc.`);
+        setTimeout(() => setToast(null), 3000);
+      }
+    }
+  };
+
   const [routeInfo, setRouteInfo] = useState(null);
   const [routePaths, setRoutePaths] = useState({
     safest: [],
@@ -114,9 +151,20 @@ export default function Home() {
   });
   const [osrmDirections, setOsrmDirections] = useState({ safest: [], balanced: [], fastest: [] });
   const [lastFetchCoords, setLastFetchCoords] = useState(null);
+  const lastFetchModeRef = useRef(transitMode);
 
   const currentCoords = routePaths[selectedRoute] || [];
   const directions = osrmDirections[selectedRoute] || [];
+
+  // Load default route preference on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedPref = localStorage.getItem('route_preference');
+      if (savedPref) {
+        setSelectedRoute(savedPref);
+      }
+    }
+  }, []);
 
   // Set up real-time geolocation tracking with watchPosition
   useEffect(() => {
@@ -170,10 +218,13 @@ export default function Home() {
       const destination = resolvedDestination || { lat: 12.9784, lng: 77.6408 };
 
       // Prevent redundant fetches if movement is minor (under 50m) — only in GPS mode
-      if (sourceMode === 'gps' && lastFetchCoords && userLocation) {
+      // Always re-fetch when transit mode changes (walk/bike/drive)
+      const modeChanged = lastFetchModeRef.current !== transitMode;
+      if (!modeChanged && sourceMode === 'gps' && lastFetchCoords && userLocation) {
         const dist = getDistance(lastFetchCoords[0], lastFetchCoords[1], userLocation[0], userLocation[1]);
         if (dist < 50) return;
       }
+      lastFetchModeRef.current = transitMode;
 
       // Fetch safety scores from backend
       const data = await fetchRoutes(source, destination);
@@ -200,14 +251,20 @@ export default function Home() {
           const backendRoute = backendRoutes[idx];
           let safetyScore = backendRoute ? backendRoute.safety_score : (85 - idx * 15);
           let baseSafety = safetyScore;
-          let speedFactor = 1.0;
 
-          let durationS = osrmRoute.distance_m / 1.4; // walking
+          // Since the public OSRM demo server only supports driving speeds for all profiles,
+          // we manually calculate realistic walking and biking times based on standard speeds.
+          let durationS = osrmRoute.duration_s;
+          if (transitMode === 'walking') {
+            durationS = osrmRoute.distance_m / 1.4; // 1.4 m/s (~5 km/h)
+          } else if (transitMode === 'biking') {
+            durationS = osrmRoute.distance_m / 4.2; // 4.2 m/s (~15 km/h)
+          }
+
+          // Apply safety modifiers based on transit mode
           if (transitMode === 'biking') {
-            durationS = osrmRoute.distance_m / 4.2;
             baseSafety = Math.max(30, safetyScore - 5);
           } else if (transitMode === 'driving') {
-            durationS = osrmRoute.duration_s * 3; // OSRM default is accurate for cars
             baseSafety = Math.min(95, safetyScore + 10);
           }
 
@@ -281,6 +338,41 @@ export default function Home() {
     loadRoutes();
   }, [transitMode, userLocation, sourceMode, resolvedSource, resolvedDestination]);
 
+  const triggerSOSBackend = async () => {
+    setSosStatus('alerting');
+    
+    // Retrieve live location if available, otherwise default to fallbacks
+    let lat = 12.9610;
+    let lng = 77.5655;
+    if (userLocation) {
+      lat = userLocation[0];
+      lng = userLocation[1];
+    }
+
+    // Retrieve contacts and custom message from local storage
+    let contacts = null;
+    let customMessage = null;
+    if (typeof window !== 'undefined') {
+      const savedContacts = localStorage.getItem('emergency_contacts');
+      if (savedContacts) {
+        try {
+          contacts = JSON.parse(savedContacts);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      customMessage = localStorage.getItem('sos_custom_message');
+    }
+
+    const result = await triggerSOSEmergency(lat, lng, contacts, customMessage);
+    if (result && result.status === 'triggered') {
+      setSosStatus('notified');
+      setTimeout(() => setSosStatus('idle'), 4000);
+    } else {
+      setSosStatus('idle');
+    }
+  };
+
   useEffect(() => {
     let timer;
     if (sosStatus === 'countdown') {
@@ -314,6 +406,7 @@ export default function Home() {
 
     // Advance to next step if user is within 30m of the next waypoint
     if (closestIdx > navigationStep && minDist < 50) {
+      // eslint-disable-next-line
       setNavigationStep(closestIdx);
     }
 
@@ -339,14 +432,15 @@ export default function Home() {
     }
 
     // Update navigation position to user's real location
-    setSimulatedCoords(userLocation);
-  }, [navigationActive, userLocation, directions, navigationStep]);
+    setSimulatedCoords([userLocation[1], userLocation[0]]);
+  }, [navigationActive, userLocation, directions, navigationStep, destinationText]);
 
   // Auto-switch selected route if the current selectedRoute is not available in routeInfo
   useEffect(() => {
     if (routeInfo && !routeInfo[selectedRoute]) {
       const keys = Object.keys(routeInfo);
       if (keys.length > 0) {
+        // eslint-disable-next-line
         setSelectedRoute(keys[0]);
       }
     }
@@ -359,17 +453,6 @@ export default function Home() {
 
   const cancelSOS = () => {
     setSosStatus('idle');
-  };
-
-  const triggerSOSBackend = async () => {
-    setSosStatus('alerting');
-    const result = await triggerSOSEmergency(12.9610, 77.5655);
-    if (result && result.status === 'triggered') {
-      setSosStatus('notified');
-      setTimeout(() => setSosStatus('idle'), 4000);
-    } else {
-      setSosStatus('idle');
-    }
   };
 
   const handleStartNavigation = () => {
@@ -415,16 +498,8 @@ export default function Home() {
 
   return (
     <div className="bg-background text-on-surface font-sans overflow-hidden h-screen flex flex-col">
-      <header className="fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-4 md:px-8 bg-white/70 backdrop-blur-xl border-b border-outline-variant/30 shadow-[0_2px_15px_-3px_rgba(0,78,62,0.03)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-md shadow-primary/10">
-            <span className="material-symbols-outlined text-white text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>shield_with_heart</span>
-          </div>
-          <div>
-            <span className="font-display text-[18px] md:text-xl font-bold tracking-tight text-primary">SafeRoute</span>
-            <span className="text-on-surface-variant font-medium text-xs block -mt-1">Bengaluru Safety Net</span>
-          </div>
-        </div>
+      <header className="fixed top-0 left-0 w-full h-16 z-50 flex justify-between items-center px-4 md:px-8 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <Logo />
 
         <div className="hidden lg:flex items-center gap-2 bg-primary/5 border border-primary/10 text-primary px-3 py-1.5 rounded-full text-[12px] font-bold">
           <span className="relative flex h-2 w-2">
@@ -445,6 +520,14 @@ export default function Home() {
             SOS Alert
           </button>
 
+          <button
+            onClick={() => setShowMethodology(true)}
+            className="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active-interaction"
+            title="Safety Science Methodology"
+          >
+            <span className="material-symbols-outlined text-[20px]">science</span>
+          </button>
+
           <Link href="/settings" className="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors active-interaction">
             <span className="material-symbols-outlined text-[22px]">account_circle</span>
           </Link>
@@ -459,9 +542,18 @@ export default function Home() {
                 <h2 className="font-display text-lg text-on-surface font-bold">Plan Safe Trip</h2>
                 <p className="text-on-surface-variant text-xs font-medium">Using live crowd & streetlight analytics</p>
               </div>
-              <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
-                Live Heatmap
-              </span>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <span className="bg-primary/10 text-primary font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wider">
+                  Live Heatmap
+                </span>
+                <button
+                  onClick={() => setShowMethodology(true)}
+                  className="text-[10px] text-primary hover:underline font-extrabold flex items-center gap-0.5 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[12px]">menu_book</span>
+                  How it Works
+                </button>
+              </div>
             </div>
 
             <div className="bg-surface-container-low p-1.5 rounded-2xl flex border border-outline-variant/15 gap-1 shadow-sm">
@@ -491,10 +583,21 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="space-y-4 relative before:absolute before:left-[21px] before:top-6 before:bottom-6 before:w-[2px] before:bg-outline-variant/30">
+            <div className="space-y-0 relative">
+              {/* Vertical connecting line - positioned precisely between the two icons */}
+              <div className="absolute left-[21px] top-[72px] bottom-[52px] w-[2px] bg-outline-variant/30 z-0"></div>
+
+              {/* Source / Starting Point */}
               <div className="relative flex gap-4 items-start">
-                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
-                  <span className="material-symbols-outlined text-primary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>my_location</span>
+                <div className="w-11 h-11 rounded-full bg-primary/10 border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="4" fill="currentColor" className="text-primary"/>
+                    <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" fill="none" className="text-primary"/>
+                    <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2" className="text-primary"/>
+                    <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2" className="text-primary"/>
+                    <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2" className="text-primary"/>
+                    <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2" className="text-primary"/>
+                  </svg>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
@@ -505,7 +608,7 @@ export default function Home() {
                         className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${sourceMode === 'gps' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                           }`}
                       >
-                        <span className="material-symbols-outlined text-[12px]">gps_fixed</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2"/><line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2"/><line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2"/><line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2"/><line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2"/></svg>
                         GPS
                       </button>
                       <button
@@ -513,7 +616,7 @@ export default function Home() {
                         className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all ${sourceMode === 'manual' ? 'bg-primary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                           }`}
                       >
-                        <span className="material-symbols-outlined text-[12px]">edit</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                         Manual
                       </button>
                     </div>
@@ -532,38 +635,52 @@ export default function Home() {
                           onClick={requestLocationPermission}
                           className="absolute right-2.5 text-primary hover:bg-primary/5 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                         >
-                          <span className="material-symbols-outlined text-[18px]">gps_fixed</span>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2"/><line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2"/><line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2"/><line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2"/><line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2"/></svg>
                         </button>
                       </div>
                     ) : (
                       <>
-                        <input
-                          className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                          type="text"
-                          placeholder="Type a Bengaluru location..."
-                          value={sourceText}
-                          onChange={(e) => handleSourceTextChange(e.target.value)}
-                          autoFocus
-                        />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
-                        {sourceSuggestions.length > 0 && (
-                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
-                            {sourceSuggestions.map((name) => (
-                              <button
-                                key={name}
-                                onClick={() => selectSourceSuggestion(name)}
-                                className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
-                              >
-                                <span className="material-symbols-outlined text-primary text-[16px]">location_on</span>
-                                {name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        <div className="relative">
+                          <input
+                            className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            type="text"
+                            placeholder="Type a Bengaluru location..."
+                            value={sourceText}
+                            onChange={(e) => handleSourceTextChange(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                performSourceSearch();
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={performSourceSearch}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer outline-none flex items-center justify-center"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                          </button>
+                          {sourceSuggestions.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
+                              {sourceSuggestions.map((name) => (
+                                <button
+                                  key={name}
+                                  onClick={() => selectSourceSuggestion(name)}
+                                  className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+                                  {name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         {resolvedSource && (
                           <div className="mt-1.5 flex items-center gap-1 text-[10px] text-primary font-bold">
-                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                            Location set — {resolvedSource.lat.toFixed(4)}, {resolvedSource.lng.toFixed(4)}
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm-1.5 14.5l-5-5 1.41-1.41L10.5 13.67l7.09-7.08L19 8l-8.5 8.5z"/></svg>
+                            Location set: {resolvedSource.lat.toFixed(4)}, {resolvedSource.lng.toFixed(4)}
                           </div>
                         )}
                       </>
@@ -572,41 +689,58 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Destination */}
               <div className="relative flex gap-4 items-start mt-4">
-                <div className="w-11 h-11 rounded-full bg-error/10 flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
-                  <span className="material-symbols-outlined text-error text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                <div className="w-11 h-11 rounded-full bg-error/10 border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm mt-6">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-error">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/>
+                  </svg>
                 </div>
                 <div className="flex-1">
                   <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider block mb-1">Destination</span>
                   <div className="relative mt-2">
-                    <input
-                      className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      type="text"
-                      placeholder="Type destination..."
-                      value={destinationText}
-                      onChange={(e) => handleDestinationTextChange(e.target.value)}
-                    />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+                    <div className="relative">
+                      <input
+                        className="w-full bg-white border border-primary/20 rounded-xl pl-3 pr-10 py-2.5 text-sm font-semibold text-on-surface outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        type="text"
+                        placeholder="Type destination..."
+                        value={destinationText}
+                        onChange={(e) => handleDestinationTextChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            performDestinationSearch();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={performDestinationSearch}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-error transition-colors cursor-pointer outline-none flex items-center justify-center"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                      </button>
 
-                    {destinationSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
-                        {destinationSuggestions.map((name) => (
-                          <button
-                            key={name}
-                            onClick={() => selectDestinationSuggestion(name)}
-                            className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-error/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
-                          >
-                            <span className="material-symbols-outlined text-error text-[16px]">location_on</span>
-                            {name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                      {destinationSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-outline-variant/20 rounded-xl shadow-xl z-50 overflow-hidden">
+                          {destinationSuggestions.map((name) => (
+                            <button
+                              key={name}
+                              onClick={() => selectDestinationSuggestion(name)}
+                              className="w-full text-left px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-error/5 flex items-center gap-2 transition-colors border-b border-outline-variant/10 last:border-0"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-error shrink-0"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+                              {name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {resolvedDestination && (
                       <div className="mt-1.5 flex items-center gap-1 text-[10px] text-error font-bold">
-                        <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                        Location set — {resolvedDestination.lat.toFixed(4)}, {resolvedDestination.lng.toFixed(4)}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-error shrink-0"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm-1.5 14.5l-5-5 1.41-1.41L10.5 13.67l7.09-7.08L19 8l-8.5 8.5z"/></svg>
+                        Location set: {resolvedDestination.lat.toFixed(4)}, {resolvedDestination.lng.toFixed(4)}
                       </div>
                     )}
                   </div>
@@ -896,7 +1030,7 @@ export default function Home() {
                       <span className="font-bold text-on-surface text-[17px]">{currentRoute.time}</span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="bg-primary-container text-white px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">
+                      <span className="bg-primary/15 text-primary px-2.5 py-0.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider">
                         Safety Score
                       </span>
                       <span className="text-primary font-black text-sm">{currentRoute.safety}%</span>
@@ -994,24 +1128,25 @@ export default function Home() {
       </main>
 
       {sosStatus !== 'idle' && (
-        <div className="fixed inset-0 bg-error/90 backdrop-blur-md z-[100] flex flex-col items-center justify-center text-white p-6 transition-all duration-300">
+        <div className="fixed inset-0 bg-error/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center text-white p-6 transition-all duration-300">
           {sosStatus === 'countdown' && (
-            <div className="text-center space-y-6">
+            <div className="text-center space-y-8">
               <div className="relative flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full border-4 border-white/30 flex items-center justify-center animate-ping absolute"></div>
-                <div className="w-32 h-32 rounded-full bg-white text-error font-black text-6xl flex items-center justify-center shadow-2xl">
+                <div className="w-44 h-44 rounded-full bg-white/5 border border-white/10 flex items-center justify-center animate-ping absolute"></div>
+                <div className="w-36 h-36 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center animate-pulse absolute"></div>
+                <div className="w-28 h-28 rounded-full bg-white text-error font-display font-black text-5xl flex items-center justify-center shadow-[0_10px_35px_rgba(244,63,94,0.4)] relative z-10">
                   {sosCountdown}
                 </div>
               </div>
-              <div className="space-y-2">
-                <h2 className="font-display text-2xl md:text-3xl font-extrabold tracking-tight">Initiating Emergency SOS</h2>
-                <p className="text-white/80 text-sm max-w-xs mx-auto">
+              <div className="space-y-3">
+                <h2 className="font-display text-3xl font-black tracking-tight text-white">Initiating Emergency SOS</h2>
+                <p className="text-white/80 text-sm max-w-sm mx-auto font-medium">
                   Alerting police dispatch and your emergency contacts with your live location.
                 </p>
               </div>
               <button
                 onClick={cancelSOS}
-                className="bg-white text-error hover:bg-white/95 px-8 py-3.5 rounded-full font-bold shadow-2xl active-interaction text-sm uppercase tracking-wider"
+                className="bg-white text-error hover:bg-white/95 px-8 py-3.5 rounded-full font-extrabold shadow-2xl active-interaction text-sm uppercase tracking-wider transition-all"
               >
                 Cancel SOS
               </button>
@@ -1038,11 +1173,173 @@ export default function Home() {
                 SMS alert sent successfully. Police Dispatch reference #2847 has been created for your live GPS location.
               </p>
               <div className="bg-white/10 p-4 rounded-2xl text-[13px] font-medium border border-white/20 text-left space-y-1">
-                <p>🚨 <strong>Patrol:</strong> Hoysala 22 dispatched</p>
-                <p>📞 <strong>Contacts:</strong> Priya Sharma notified via SMS</p>
+                <p className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0"><path d="M12 2L1 21h22L12 2zm0 3.83L19.53 19H4.47L12 5.83zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z"/></svg>
+                  <span><strong>Patrol:</strong> Hoysala 22 dispatched</span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1.003 1.003 0 011.01-.24c1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.1.31.03.66-.25 1.02l-2.2 2.2z"/></svg>
+                  <span><strong>Contacts:</strong> Priya Sharma notified via SMS</span>
+                </p>
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {showMethodology && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 transition-all duration-300">
+          <div className="bg-white rounded-3xl p-6 md:p-8 shadow-2xl max-w-2xl w-full border border-slate-100 max-h-[80vh] flex flex-col slide-up relative">
+            
+            {/* Sticky Header */}
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 shrink-0">
+              <div>
+                <h3 className="font-display font-black text-xl text-primary flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[24px]">science</span>
+                  Safety Science & Routing Methodology
+                </h3>
+                <p className="text-[11px] text-on-surface-variant font-semibold mt-0.5">
+                  SafeRoute Bengaluru algorithm weights, spatial models, and data pipeline frameworks.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMethodology(false)}
+                className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-error hover:text-white transition-all active-interaction shrink-0"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto pr-2 py-6 space-y-8">
+              
+              {/* Composite Score Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary/10 text-primary w-7 h-7 rounded-lg flex items-center justify-center text-[15px] font-bold">1</span>
+                  <h4 className="font-display font-bold text-sm text-on-surface">Composite Safety Index (0–100)</h4>
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Every street segment is evaluated using active regional geometry and features. The Safety Score ($S$) is calculated as a composite weighted sum of positive features minus crime penalties, bound between $[0, 100]$:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {[
+                    { title: "CCTV Camera Coverage (30%)", icon: "videocam", color: "bg-purple-500/10 text-purple-600 border-purple-200/20", desc: "Density of active CCTV assets within 200m radius of the street segment." },
+                    { title: "Human Activity & Crowd (25%)", icon: "groups", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200/20", desc: "Density of POIs, shops, metro/bus transit points, and crowd signals." },
+                    { title: "Emergency Services (20%)", icon: "local_police", color: "bg-blue-500/10 text-blue-600 border-blue-200/20", desc: "Proximity to police stations, pink booths, hospitals, and Namma 112 posts." },
+                    { title: "Streetlight Luminosity (15%)", icon: "lightbulb", color: "bg-amber-500/10 text-amber-600 border-amber-200/20", desc: "Streetlight spacing density per 100m of segment based on BBMP records." },
+                    { title: "Inverse Crime Risk (10%)", icon: "gavel", color: "bg-rose-500/10 text-rose-600 border-rose-200/20", desc: "Absence of nearby incident logs from NCRB and local reports (inverted scale)." }
+                  ].map((attr, idx) => (
+                    <div key={idx} className={`p-3.5 rounded-2xl border ${attr.color} space-y-1.5`}>
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px]">{attr.icon}</span>
+                        <span className="font-extrabold text-[12px]">{attr.title}</span>
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-on-surface-variant font-medium">{attr.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Routing Cost Function Section */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary/10 text-primary w-7 h-7 rounded-lg flex items-center justify-center text-[15px] font-bold">2</span>
+                  <h4 className="font-display font-bold text-sm text-on-surface">Routing Cost Function</h4>
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Dijkstra's pathfinding weight is adjusted to account for segment safety scores and transit profile constraints. The modified routing cost ($C$) for a road segment of length $L$ is calculated as:
+                </p>
+
+                <div className="bg-slate-900 text-slate-100 p-5 rounded-2xl text-center font-mono my-3 shadow-inner relative overflow-hidden select-all">
+                  <div className="absolute top-2 left-3 text-[8px] tracking-widest text-slate-500 uppercase font-bold">Mathematical Model</div>
+                  <p className="text-base font-bold text-primary tracking-wide pt-1">
+                    C = L &times; (1 + &beta; &times; (1 - S / 100))
+                  </p>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <p className="text-on-surface-variant font-semibold">Where the Safety Influence Coefficient (&beta;) adapts to user selected choices:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div className="bg-surface-container-low border border-outline-variant/15 p-3 rounded-xl">
+                      <span className="font-black text-primary text-[11px] block">Safest Route (&beta; = 10.0)</span>
+                      <span className="text-[10px] text-on-surface-variant leading-normal block mt-1">
+                        High penalty detours. The graph router detours up to 10x physical distance to avoid poorly lit or unmonitored roads.
+                      </span>
+                    </div>
+                    <div className="bg-surface-container-low border border-outline-variant/15 p-3 rounded-xl">
+                      <span className="font-black text-amber-700 text-[11px] block">Balanced Route (&beta; = 2.0)</span>
+                      <span className="text-[10px] text-on-surface-variant leading-normal block mt-1">
+                        Compromise mode. Moderately balances route lengths with safety indices for optimized speed-to-safety paths.
+                      </span>
+                    </div>
+                    <div className="bg-surface-container-low border border-outline-variant/15 p-3 rounded-xl">
+                      <span className="font-black text-slate-700 text-[11px] block">Fastest Route (&beta; = 0.0)</span>
+                      <span className="text-[10px] text-on-surface-variant leading-normal block mt-1">
+                        Direct shortest path. Safety scoring penalties are ignored (cost equals actual physical distance).
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Spatial Mechanics Section */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary/10 text-primary w-7 h-7 rounded-lg flex items-center justify-center text-[15px] font-bold">3</span>
+                  <h4 className="font-display font-bold text-sm text-on-surface">Spatial Constraints & Modifiers</h4>
+                </div>
+                <div className="space-y-3.5 text-xs text-on-surface-variant leading-relaxed">
+                  <div className="flex gap-3">
+                    <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">location_searching</span>
+                    <div>
+                      <h5 className="font-bold text-on-surface text-[12px]">UTM Zone 43N (EPSG:32643) Projection</h5>
+                      <p className="text-[10.5px] mt-0.5 font-medium leading-relaxed">
+                        To calculate precise distance thresholds (like the 200m CCTV coverage area), all spatial math is projected from WGS 84 (lat/lng coordinates) to UTM Zone 43N meters using PostGIS functions.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">schedule</span>
+                    <div>
+                      <h5 className="font-bold text-on-surface text-[12px]">Time-of-Day Multipliers</h5>
+                      <p className="text-[10.5px] mt-0.5 font-medium leading-relaxed">
+                        Safety metrics automatically adjust for nighttime risk profiles. Base safety scores are multiplied by time-of-day coefficients:
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-2 font-mono text-[9px]">
+                        <span className="bg-surface-container border border-outline-variant/20 px-2 py-1 rounded">00:00–05:00 (0.65x)</span>
+                        <span className="bg-surface-container border border-outline-variant/20 px-2 py-1 rounded">22:00–00:00 (0.70x)</span>
+                        <span className="bg-surface-container border border-outline-variant/20 px-2 py-1 rounded">20:00–22:00 (0.85x)</span>
+                        <span className="bg-surface-container border border-outline-variant/20 px-2 py-1 rounded">Daytime (1.00x)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">hub</span>
+                    <div>
+                      <h5 className="font-bold text-on-surface text-[12px]">KD-Tree Snapping</h5>
+                      <p className="text-[10.5px] mt-0.5 font-medium leading-relaxed">
+                        For sub-millisecond route calculation latencies, raw GPS inputs snap to the closest OpenStreetMap graph intersection node via a SciPy-based `cKDTree` spatial index.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="pt-4 border-t border-slate-100 flex justify-end shrink-0">
+              <button
+                onClick={() => setShowMethodology(false)}
+                className="bg-primary hover:bg-primary/95 text-white font-bold text-xs h-10 px-6 rounded-full shadow-md active-interaction transition-all"
+              >
+                Close Science Panel
+              </button>
+            </div>
+            
+          </div>
         </div>
       )}
 

@@ -1,0 +1,71 @@
+{
+  "HAL, Bengaluru": [
+    {
+      "place_id": 250536151,
+      "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+      "osm_type": "node",
+      "osm_id": 5296886722,
+      "lat": "12.9557759",
+      "lon": "77.6881147",
+      "class": "amenity",
+      "type": "community_centre",
+      "place_rank": 30,
+      "importance": 7.094453345536e-05,
+      "addresstype": "amenity",
+      "name": "Hal",
+      "display_name": "Hal, Varthur Road, Sangama Ward, Bengaluru East City Corporation, Bengaluru, Bangalore East, Bengaluru Urban, Karnataka, 560037, India",
+      "boundingbox": [
+        "12.9557259",
+        "12.9558259",
+        "77.6880647",
+        "77.6881647"
+      ]
+    }
+  ],
+  "HL, Bengaluru": [
+    {
+      "place_id": 252488391,
+      "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+      "osm_type": "way",
+      "osm_id": 1132370059,
+      "lat": "13.3073721",
+      "lon": "77.6923379",
+      "class": "tourism",
+      "type": "hotel",
+      "place_rank": 30,
+      "importance": 4.3243305104097314e-05,
+      "addresstype": "tourism",
+      "name": "JW Marriott Bengaluru Prestige Golfshire Resort & Spa",
+      "display_name": "JW Marriott Bengaluru Prestige Golfshire Resort & Spa, Nandi Hills Road, Kottige Thimmanahalli, Maligenahalli, Devanahalli taluku, Bengaluru North, Karnataka, 562164, India",
+      "boundingbox": [
+        "13.3063472",
+        "13.3081385",
+        "77.6913667",
+        "77.6933680"
+      ]
+    }
+  ],
+  "HA, Bengaluru": [
+    {
+      "place_id": 245381109,
+      "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+      "osm_type": "way",
+      "osm_id": 432544382,
+      "lat": "16.6917003",
+      "lon": "74.2580438",
+      "class": "highway",
+      "type": "primary",
+      "place_rank": 26,
+      "importance": 0.053390700389105025,
+      "addresstype": "road",
+      "name": "Old Pune Bengaluru Highway",
+      "display_name": "Old Pune Bengaluru Highway, Shivaji Park, Kolhapur, Karvir, Kolhapur, Maharashtra, 416004, India",
+      "boundingbox": [
+        "16.6832219",
+        "16.6991184",
+        "74.2541588",
+        "74.2583900"
+      ]
+    }
+  ]
+}

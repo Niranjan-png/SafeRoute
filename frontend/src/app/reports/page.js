@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchNearbyReports, postReport, triggerSOSEmergency, deleteReport } from '../../utils/api';
+import Logo from '../../components/Logo';
 
 export default function Reports() {
   const [reports, setReports] = useState([]);
@@ -37,6 +38,7 @@ export default function Reports() {
       }
     }
     loadReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const triggerSOS = () => {
@@ -118,15 +120,15 @@ export default function Reports() {
   };
 
   return (
-    <div className="bg-background text-on-surface min-h-screen font-sans flex flex-col">
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-white/70 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm">
+    <div className="bg-background text-on-surface h-screen overflow-hidden font-sans flex flex-col">
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 md:px-8 h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-primary font-bold hover:bg-primary/5 px-3 py-1.5 rounded-xl transition-colors active-interaction">
             <span className="material-symbols-outlined text-[20px]">arrow_back</span>
             <span className="hidden md:block text-sm">Back to Map</span>
           </Link>
           <div className="h-6 w-[1px] bg-outline-variant/30 hidden md:block"></div>
-          <h1 className="font-display text-lg font-bold text-primary">SafeRoute Feed</h1>
+          <Logo size={32} />
         </div>
 
         <div className="flex items-center gap-3">
@@ -169,7 +171,7 @@ export default function Reports() {
           </div>
         </aside>
 
-        <main className="flex-1 md:ml-80 px-4 md:px-8 py-8 pb-32">
+        <main className="flex-1 md:ml-80 h-[calc(100vh-64px)] overflow-y-auto px-4 md:px-8 py-8 pb-32">
           <div className="max-w-[760px] mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
               <div>
@@ -189,21 +191,21 @@ export default function Reports() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white p-5 rounded-2xl flex flex-col justify-between h-28 border border-outline-variant/20 shadow-[0_4px_20px_-5px_rgba(0,78,62,0.02)]">
+              <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-28 border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-md">
                 <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Reports Today</span>
                 <div className="flex items-baseline gap-2">
                   <span className="font-display text-3xl font-black text-primary">{reports.length + 39}</span>
-                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded-md font-extrabold">↑ 12%</span>
+                  <span className="text-[10px] text-primary bg-primary-container/20 px-1.5 py-0.5 rounded-md font-extrabold">↑ 12%</span>
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl flex flex-col justify-between h-28 border border-outline-variant/20 shadow-[0_4px_20px_-5px_rgba(0,78,62,0.02)]">
+              <div className="bg-white/80 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-28 border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-md">
                 <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Monitored Zones</span>
                 <div className="flex items-baseline gap-2">
                   <span className="font-display text-3xl font-black text-on-surface">18</span>
                   <span className="text-[10px] text-on-surface-variant font-bold">Active in Bangalore</span>
                 </div>
               </div>
-              <div className="bg-primary-container p-5 rounded-2xl flex flex-col justify-between h-28 text-white shadow-lg shadow-primary/10">
+              <div className="bg-gradient-to-br from-primary to-primary/80 p-5 rounded-2xl flex flex-col justify-between h-28 text-white shadow-md shadow-primary/10 transition-all duration-300 hover:shadow-lg">
                 <span className="text-[10px] text-white/80 uppercase font-bold tracking-wider">Safety Notification</span>
                 <p className="text-xs font-semibold leading-relaxed">Avoid the Indiranagar bypass route after 11 PM due to streetlight maintenance.</p>
               </div>
@@ -256,6 +258,7 @@ export default function Reports() {
                     </div>
                     {report.imageUrl && (
                       <div className="w-full sm:w-32 h-24 rounded-2xl overflow-hidden shrink-0 border border-outline-variant/20 bg-surface-container">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           alt="Report attachment" 
                           className="w-full h-full object-cover grayscale opacity-90 hover:grayscale-0 transition-all cursor-pointer" 

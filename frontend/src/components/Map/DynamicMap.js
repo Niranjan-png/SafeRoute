@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { crimeHeatmapGeoJSON } from '../../data/crimeHeatmapData';
@@ -26,7 +26,7 @@ export default function DynamicMap({
 }) {
   const mapRef = useRef(null);
 
-  const currentPath = path || [];
+  const currentPath = useMemo(() => path || [], [path]);
   const hasPath = currentPath.length > 0;
 
   const routeColors = {

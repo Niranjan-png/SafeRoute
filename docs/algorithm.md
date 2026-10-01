@@ -109,7 +109,7 @@ Used to generate **top 3 route options**:
 4. Select the candidate with the lowest cost that is sufficiently different
 5. Repeat until K paths are found
 
-**Dissimilarity check**: A candidate is accepted only if ≥20% of its edges are unique compared to all existing paths.
+**Dissimilarity check**: A candidate is accepted only if ≥20% of its edges are unique compared to the union of edges from all previously accepted paths (union interpretation).
 
 ### Travel Time Estimation
 

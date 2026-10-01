@@ -33,5 +33,8 @@ class SafetyScoreEngine:
         else:  # 0–4 AM
             return 0.65
 
-    async def recompute_all(self):
+    async def refresh_all_scores(self):
         pass
+
+    # Backward-compatible alias
+    recompute_all = refresh_all_scores

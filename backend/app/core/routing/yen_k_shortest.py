@@ -16,12 +16,27 @@ def yen_k_shortest_paths(
     
     A = []
     B = []
+    accepted_edge_union = set()
+
+    def _path_edge_ids(path_nodes):
+        edges = set()
+        for j in range(len(path_nodes) - 1):
+            edges.add((path_nodes[j], path_nodes[j + 1]))
+        return edges
+
+    def _is_diverse(candidate_nodes, union_edges):
+        candidate_edges = _path_edge_ids(candidate_nodes)
+        if not candidate_edges:
+            return False
+        unique = len(candidate_edges - union_edges)
+        return (unique / len(candidate_edges)) >= 0.20
     
     first_path = dijkstra_safest_route(G, source, target, timestamp)
     if not first_path:
         return []
         
     A.append(first_path)
+    accepted_edge_union.update(_path_edge_ids(first_path[0]))
     
     for k_idx in range(1, k):
         prev_path = A[k_idx-1][0]
@@ -55,12 +70,16 @@ def yen_k_shortest_paths(
                 
                 path_entry = (total_path, total_cost)
                 if path_entry not in B:
-                    B.append(path_entry)
+                    candidate_path = path_entry[0]
+                    if _is_diverse(candidate_path, accepted_edge_union):
+                        B.append(path_entry)
                     
         if not B:
             break
             
         B.sort(key=lambda x: x[1])
-        A.append(B.pop(0))
+        selected_path, selected_cost = B.pop(0)
+        A.append((selected_path, selected_cost))
+        accepted_edge_union.update(_path_edge_ids(selected_path))
         
     return A

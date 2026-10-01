@@ -23,5 +23,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
     # OTP fields — stored hashed, cleared after verification
+    verified: Mapped[bool] = mapped_column(default=False)
     hashed_otp: Mapped[str | None] = mapped_column(String(128))
     otp_expires_at: Mapped[datetime | None] = mapped_column()

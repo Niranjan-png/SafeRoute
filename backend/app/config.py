@@ -3,6 +3,7 @@ SafeRoute Bengaluru — Application Configuration
 Loads all settings from environment variables using Pydantic Settings.
 """
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -21,8 +22,8 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # --- Database ---
-    database_url: str = "postgresql+asyncpg://saferoute:saferoute_dev@localhost:5432/saferoute"
-    database_url_sync: str = "postgresql://saferoute:saferoute_dev@localhost:5432/saferoute"
+    database_url: str = Field(default=..., env="DATABASE_URL")
+    database_url_sync: str = Field(default=..., env="DATABASE_URL_SYNC")
 
     # --- Redis ---
     redis_url: str = "redis://localhost:6379/0"
@@ -31,8 +32,15 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def check_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("JWT_SECRET_KEY must be set and non-empty")
+        return v
+
     # --- JWT Auth ---
-    jwt_secret_key: str = "CHANGE_ME_TO_A_RANDOM_SECRET_STRING"
+    jwt_secret_key: str = Field(..., env="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 1440  # 24 hours
 
